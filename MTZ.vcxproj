@@ -141,6 +141,16 @@
   <ItemGroup>
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="mu.txt" />
+    <Text Include="nvtr.txt" />
+    <Text Include="omega.txt" />
+    <Text Include="sigma.txt" />
+    <Text Include="x.txt" />
+    <Text Include="xyz.txt" />
+    <Text Include="y.txt" />
+    <Text Include="z.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

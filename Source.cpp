@@ -1,6 +1,7 @@
 #include <vector>
 #include <fstream>
 #include <algorithm>
+#include <iostream>
 
 using namespace std;
 
@@ -40,6 +41,24 @@ double G3T[4][4] = {
    {1, 2, -1, -2},
 };
 
+vector<double> operator/(vector<double> a, vector<double> b) {
+	double coefB = b[0] * b[0] + b[1] * b[1];
+	vector<double> oppositeB = { b[0] / coefB, -(b[1] / coefB) };
+	return { a[0] * oppositeB[0] - a[1] * oppositeB[1], a[0] * oppositeB[1] + a[1] * oppositeB[0] };
+}
+
+vector<double> operator*(vector<double> a, vector<double> b) {
+	return { a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0] };
+}
+
+vector<double> operator+(vector<double> a, vector<double> b) {
+	return { a[0] + b[0], a[1] + b[1] };
+}
+
+vector<double> operator-(vector<double> a, vector<double> b) {
+	return { a[0] - b[0], a[1] - b[1] };
+}
+
 
 using namespace std;
 
@@ -47,8 +66,8 @@ using namespace std;
 struct matrix // Структура для матрицы, которая хранится в
 	// разряженном строчно-столбцовом формате относительно блочных элементов (размер блока 2x2) 
 {
-	vector<double[2][2]> di;// диагональные элементы
-	vector<double[2][2]> al;// элементы нижнего тругольника
+	vector<vector<double>> di;// диагональные элементы
+	vector<vector<double>> al;// элементы нижнего тругольника
 	vector<int> li;// профиль матрицы
 	vector<int> lj;// портрет матрицы
 };
@@ -63,8 +82,8 @@ vector<vector<double>> formxyz(const vector<double >& x, const vector<double >& 
 			for (double ix : x) {
 				vector<double> tmpxyz;
 				tmpxyz.emplace_back(ix);
-				tmpxyz.emplace_back(iz);
 				tmpxyz.emplace_back(iy);
+				tmpxyz.emplace_back(iz);
 				tmp.emplace_back(tmpxyz);
 				fout << count++ << ' ' << ix << ' ' << iy << ' ' << iz << std::endl;
 			}
@@ -97,22 +116,24 @@ vector<vector<pair<int, pair<int, int>>>> formnvtr(const vector<double>& x, cons
 					make_pair(ix + count + xsize * ysize, ix + count + xsize * ysize + 1)));
 				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize + (xsize - 1) * ysize * iz + (xsize - 1) * iy + (xsize - 1),
 					make_pair(ix + xsize + xsize * ysize + count, ix + xsize + xsize * ysize + count + 1)));
-				aEdges.emplace_back(make_pair(iy + ix + (xsize - 1) * ysize * zsize + iz * xsize * ysize + iy * xsize,
-					make_pair(ix + count, ix + count + xsize * ysize)));
-				aEdges.emplace_back(make_pair(iy + ix + (xsize - 1) * ysize * zsize + iz * xsize * ysize + iy * xsize + 1,
-					make_pair(ix + count + 1, ix + count + xsize * ysize + 1)));
-				aEdges.emplace_back(make_pair(iy + ix + (xsize - 1) * ysize * zsize + iz * xsize * ysize + iy * xsize + xsize,
-					make_pair(ix + xsize + count, ix + xsize + xsize * ysize + count)));
-				aEdges.emplace_back(make_pair(iy + ix + (xsize - 1) * ysize * zsize + iz * xsize * ysize + iy * xsize + xsize + 1,
-					make_pair(ix + xsize + count + 1, ix + xsize + xsize * ysize + count + 1)));
-				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + xsize * ysize * (zsize - 1) + iz * xsize * (ysize - 1) + iy * xsize,
+
+				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + iz * xsize * (ysize - 1) + iy * xsize,
 					make_pair(ix + count, ix + xsize + count)));
-				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + xsize * ysize * (zsize - 1) + iz * xsize * (ysize - 1) + iy * xsize + 1,
+				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + iz * xsize * (ysize - 1) + iy * xsize + 1,
 					make_pair(ix + count + 1, ix + xsize + count + 1)));
-				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + xsize * ysize * (zsize - 1) + iz * xsize * (ysize - 1) + iy * xsize + xsize * (ysize - 1),
+				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + iz * xsize * (ysize - 1) + iy * xsize + xsize,
 					make_pair(ix + count + xsize * ysize, ix + xsize + xsize * ysize + count)));
-				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + xsize * ysize * (zsize - 1) + iz * xsize * (ysize - 1) + iy * xsize + xsize * (ysize - 1) + 1,
+				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + iz * xsize * (ysize - 1) + iy * xsize + xsize + 1,
 					make_pair(ix + count + xsize * ysize + 1, ix + xsize + xsize * ysize + count + 1)));
+
+				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + xsize * (ysize - 1) * zsize + iz * xsize * ysize + iy * xsize,
+					make_pair(ix + count, ix + count + xsize * ysize)));
+				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + xsize * (ysize - 1) * zsize + iz * xsize * ysize + iy * xsize + 1,
+					make_pair(ix + count + 1, ix + count + xsize * ysize + 1)));
+				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + xsize * (ysize - 1) * zsize + iz * xsize * ysize + iy * xsize + xsize,
+					make_pair(ix + xsize + count, ix + xsize + xsize * ysize + count)));
+				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + xsize * (ysize - 1) * zsize + iz * xsize * ysize + iy * xsize + xsize + 1,
+					make_pair(ix + xsize + count + 1, ix + xsize + xsize * ysize + count + 1)));
 
 				fout << aEdges[0].first << ' '
 					<< aEdges[0].second.first << ' '
@@ -181,87 +202,100 @@ vector<vector<double>> locEdgesG(double coef, double hx, double hy, double hz)
 			tmp[i][j] = constxy_z * G1[i][j] + constxz_y * G2[i][j];
 			tmp[i + 4][j + 4] = constxy_z * G1[i][j] + constyz_x * G2[i][j];
 			tmp[i + 8][j + 8] = constxz_y * G1[i][j] + constyz_x * G2[i][j];
-			tmp[i][j + 4] = tmp[i + 4][j] = constz * G2[i][j];
+
+			tmp[i][j + 4] = constz * G2[i][j];
+			tmp[i + 4][j] = constz * G2[i][j];
 			tmp[i][j + 8] = consty * G3[i][j];
 			tmp[i + 8][j] = consty * G3T[i][j];
-			tmp[i + 4][j + 8] = tmp[i + 8][j + 4] = constx * G1[i][j];
+			tmp[i + 4][j + 8] = constx * G1[i][j];
+			tmp[i + 8][j + 4] = constx * G1[i][j];
 		}
 	}
 	return tmp;
 }
 
-vector<vector<double[2][2]>> createLocalMG(double mu, double omega, double hx, double hy, double hz) { // Создание локальной матрицы масс
-	vector<vector<double[2][2]>> locMG;// общая матрица, которая хранит только нижний треугольник (в виде блочных элементов)
-	//создаем локальную матрицу жесткости
-	vector<vector<double>> locG = locEdgesG(mu, hx, hy, hz);
-
+vector<vector<double>> locEdgesM(double coef, double omega, double hx, double hy, double hz) {
 	vector<vector<double>> locM;
-	// создаем локальную матрицу масс
 	for (int i = 0; i < 4; ++i) {
 		vector<double> tmp;
 		for (int j = 0; j < 4; ++j) {
-			tmp.push_back(D[i][j] * omega * hx * hy * hz / 36);
+			tmp.push_back(D[i][j] * coef * omega * hx * hy * hz / 36);
 		}
 		locM.emplace_back(tmp);
 	}
+	return locM;
+}
+
+vector<vector<vector<double>>> createLocalMG(double mu, double sigma, double omega, double hx, double hy, double hz) { // Создание локальной матрицы масс
+	vector<vector<vector<double>>> locMG;// общая матрица, которая хранит только нижний треугольник (в виде блочных элементов)
+	//создаем локальную матрицу жесткости
+	vector<vector<double>> locG = locEdgesG(mu, hx, hy, hz);
+
+	// создаем локальную матрицу масс
+	vector<vector<double>> locM = locEdgesM(sigma, omega, hx, hy, hz);
+	
 	//заполняем общую матрицу элементами матрицы жесткости
 	for (int i = 0; i < 12; ++i) {
-		vector<double[2][2]> tmp;
-		for(int j = 0; j < i; ++j){
-			tmp.push_back({ { locG[i][i], 0 }, { 0, locG[i][j] } });
+		vector<vector<double>> tmp;
+		for(int j = 0; j <= i; ++j){
+			vector<double> tmp2;
+			tmp2.push_back(locG[i][j]);
+			tmp2.push_back(0);
+			tmp.emplace_back(tmp2);
 		}
 		locMG.emplace_back(tmp);
 	}
 	//заполняем общую матрицу элементами матрицы масс
 	for (int k = 0; k < 3; ++k) {
 		for (int i = 0; i < 4; ++i) {
-			for (int j = 0; j < i; ++j) {
-				locMG[i + 4 * k][j + 4 * k][0][1] = -locM[i][j];
-				locMG[i + 4 * k][j + 4 * k][1][0] = locM[i][j];
+			for (int j = 0; j <= i; ++j) {
+				locMG[i + 4 * k][j + 4 * k][1] = locM[i][j];
 			}
 		}
 	}
 	return locMG;
 }
 
-bool isZero(double a[2][2]) {
+bool isZero(vector<double> &a) {
 	for (int i = 0; i < 2; ++i) {
-		for (int j = 0; j < 2; ++j) {
-			if (a[i][j] != 0) {
-				return false;
-			}
+		if (a[i] != 0) {
+			return false;
 		}
 	}
 	return true;
 }
 
-bool compareLine(pair<double, pair<int, int>>& a, pair<double, pair<int, int>>& b) {
+bool compareLine(pair<vector<double>, pair<int, int>>& a, pair<vector<double>, pair<int, int>>& b) {
 	return a.second.first < b.second.first;
 }
 
-bool compareColumn(pair<double, pair<int, int>>& a, pair<double, pair<int, int>>& b) {
+bool compareColumn(pair<vector<double>, pair<int, int>>& a, pair<vector<double>, pair<int, int>>& b) {
 	return a.second.second < b.second.second;
 }
 
-matrix createGlobalMG(vector<double> mu, vector<double> omega, vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, int n) {
+matrix createGlobalMG(vector<double> mu, vector<double> sigma, double omega, vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, int n) {
 	matrix res;
 
-	vector<pair<double[2][2], pair<int, int>>> tmp;
+	vector<pair<vector<double>, pair<int, int>>> tmp;
 
-	vector<double[2][2]> di;
+	vector<vector<double>> di;
 	di.resize(n);
+	for (int i = 0; i < n; ++i) {
+		di[i].push_back(0);
+		di[i].push_back(0);
+	}
 	
 	vector<int> li;
 	li.resize(n + 1);
 	for (int i = 0; i < li.size(); ++i) {
 		li[i] = 0;
 	}
-	vector<double[2][2]> al;
+	vector<vector<double>> al;
 	vector<int> lj;
 
 
 	for (int k = 0; k < nvtr.size(); ++k) {
-		vector<vector<double[2][2]>> locMG = createLocalMG(mu[k], omega[k],
+		vector<vector<vector<double>>> locMG = createLocalMG(mu[k], sigma[k], omega,
 			abs(xyz[nvtr[k][0].second.first][0] - xyz[nvtr[k][0].second.second][0]),
 			abs(xyz[nvtr[k][4].second.first][1] - xyz[nvtr[k][4].second.second][1]),
 			abs(xyz[nvtr[k][8].second.first][2] - xyz[nvtr[k][8].second.second][2]));
@@ -270,19 +304,26 @@ matrix createGlobalMG(vector<double> mu, vector<double> omega, vector<vector<pai
 			int count = 0;
 			for (int j = 0; j <= i; ++j) {
 				if (i == j) {
-					for (int line = 0; line < 2; ++line) {
-						for (int col = 0; col < 2; ++col) {
-							di[nvtr[k][i].first][line][col] += locMG[i][j][line][col];
-						}
-					}
+					di[nvtr[k][i].first][0] += locMG[i][j][0];
+					di[nvtr[k][i].first][1] += locMG[i][j][1];
 					continue;
 				}
 				if (isZero(locMG[i][j])) {
 					continue;
 				}
-
-				tmp.emplace_back(make_pair(locMG[i][j], make_pair(nvtr[k][i].first, nvtr[k][j].first)));
-				count++;
+				auto res = find_if(tmp.begin(), tmp.end(), [b = make_pair(nvtr[k][i].first, nvtr[k][j].first)](pair<vector<double>, pair<int, int>> a) {
+					if (a.second.first == b.first && a.second.second == b.second) {
+						return true;
+					}
+					return false;
+				});
+				if (res != tmp.end()) {
+					res->first = res->first + locMG[i][j];
+				}
+				else {
+					tmp.emplace_back(make_pair(locMG[i][j], make_pair(nvtr[k][i].first, nvtr[k][j].first)));
+					count++;
+				}
 			}
 			for (int f = nvtr[k][i].first + 1; f < li.size(); ++f) {
 				li[f] += count;
@@ -290,7 +331,7 @@ matrix createGlobalMG(vector<double> mu, vector<double> omega, vector<vector<pai
 		}
 	}
 
-	sort(tmp.begin(), tmp.end(), compareLine);
+	std::sort(tmp.begin(), tmp.end(), compareLine);
 	int i = 1;
 	while (i < tmp.size()) {
 		if (tmp[i].second.first == tmp[0].second.first) {
@@ -299,7 +340,7 @@ matrix createGlobalMG(vector<double> mu, vector<double> omega, vector<vector<pai
 		}
 		else
 		{
-			sort(tmp.begin(), tmp.begin() + i - 1, compareColumn);
+			std::sort(tmp.begin(), tmp.begin() + i - 1, compareColumn);
 			for (int j = 0; j < i; ++j) {
 				al.push_back(tmp[j].first);
 				lj.push_back(tmp[j].second.second);
@@ -309,7 +350,7 @@ matrix createGlobalMG(vector<double> mu, vector<double> omega, vector<vector<pai
 		}
 	}
 
-	sort(tmp.begin(), tmp.end(), compareColumn);
+	std::sort(tmp.begin(), tmp.end(), compareColumn);
 	for (auto& elem : tmp) {
 		al.push_back(elem.first);
 		lj.push_back(elem.second.second);
@@ -323,7 +364,345 @@ matrix createGlobalMG(vector<double> mu, vector<double> omega, vector<vector<pai
 	return res;
 }
 
-int main() {
+vector<double> MultMatrixToVector(vector<vector<double>> matrix, vector<double> vector1)
+{
+	vector<double> out;
+	out.resize(12);
+	for (int i = 0; i < 12; ++i) {
+		out[i] = 0;
+	}
+	for (int ix = 0; ix < 4; ix++) {
+		for (int jx = 0; jx < 4; jx++)
+			out[ix] += matrix[ix][jx] * vector1[jx];
+	}
+	for (int ix = 4; ix < 8; ix++) {
+		for (int jx = 0; jx < 4; jx++)
+			out[ix] += matrix[ix - 4][jx] * vector1[jx + 4];
+	}
+	for (int ix = 8; ix < 12; ix++) {
+		for (int jx = 0; jx < 4; jx++)
+			out[ix] += matrix[ix - 8][jx] * vector1[jx + 8];
+	}
+	return out;
+}
 
+vector<double> funcSin(double x, double y, double z) {
+	vector<double> xyz;
+	xyz.resize(3);
+	xyz[0] = 0;
+	xyz[1] = x * x;
+	xyz[2] = 0;
+	return xyz;
+}
+
+vector<double> funcCos(double x, double y, double z) {
+	vector<double> xyz;
+	xyz.resize(3);
+	xyz[0] = 0;
+	xyz[1] = 0;
+	xyz[2] = 0;
+	return xyz;
+}
+
+vector<double> funcFSin(double x, double y, double z, double mu, double sigma, double omega) {
+	vector<double> xyz;
+	xyz.resize(3);
+	xyz[0] = 0;
+	xyz[1] = -2 / mu;
+	xyz[2] = 0;
+	return xyz;
+}
+
+vector<double> funcFCos(double x, double y, double z, double mu, double sigma, double omega) {
+	vector<double> xyz;
+	xyz.resize(3);
+	xyz[0] = 0;
+	xyz[1] = sigma * omega * x * x;
+	xyz[2] = 0;
+	return xyz;
+}
+
+vector<double> createFSin(vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, vector<double> mu, vector<double> sigma, double omega, int n) {
+	vector<double> FSin;
+	FSin.resize(n);
+	vector<double> locF;
+	vector<vector<double>> locM;
+	locF.resize(12);
+	for (int k = 0; k < nvtr.size(); ++k) {
+		locM = locEdgesM(1, 1,
+			abs(xyz[nvtr[k][0].second.first][0] - xyz[nvtr[k][0].second.second][0]),
+			abs(xyz[nvtr[k][4].second.first][1] - xyz[nvtr[k][4].second.second][1]),
+			abs(xyz[nvtr[k][8].second.first][2] - xyz[nvtr[k][8].second.second][2]));
+		for (int i = 0; i < 12; ++i) {
+			locF[i] = funcFSin((xyz[nvtr[k][i].second.second][0] + xyz[nvtr[k][i].second.first][0]) / 2.,
+								(xyz[nvtr[k][i].second.second][1] + xyz[nvtr[k][i].second.first][1]) / 2.,
+								(xyz[nvtr[k][i].second.second][2] + xyz[nvtr[k][i].second.first][2]) / 2., mu[k], sigma[k], omega)[i / 4];
+		}
+		locF = MultMatrixToVector(locM, locF);
+		for (int i = 0; i < 12; ++i) {
+			FSin[nvtr[k][i].first] += locF[i];
+		}
+	}
+
+	return FSin;
+}
+
+vector<double> createFCos(vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, vector<double> mu, vector<double> sigma, double omega, int n) {
+	vector<double> FCos;
+	FCos.resize(n);
+	vector<double> locF;
+	vector<vector<double>> locM;
+	locF.resize(12);
+	for (int k = 0; k < nvtr.size(); ++k) {
+		locM = locEdgesM(1, 1,
+			abs(xyz[nvtr[k][0].second.first][0] - xyz[nvtr[k][0].second.second][0]),
+			abs(xyz[nvtr[k][4].second.first][1] - xyz[nvtr[k][4].second.second][1]),
+			abs(xyz[nvtr[k][8].second.first][2] - xyz[nvtr[k][8].second.second][2]));
+		for (int i = 0; i < 12; ++i) {
+			locF[i] = funcFCos((xyz[nvtr[k][i].second.second][0] + xyz[nvtr[k][i].second.first][0]) / 2.,
+								(xyz[nvtr[k][i].second.second][1] + xyz[nvtr[k][i].second.first][1]) / 2.,
+								(xyz[nvtr[k][i].second.second][2] + xyz[nvtr[k][i].second.first][2]) / 2., mu[k], sigma[k], omega)[i / 4];
+		}
+		locF = MultMatrixToVector(locM, locF);
+		for (int i = 0; i < 12; ++i) {
+			FCos[nvtr[k][i].first] += locF[i];
+		}
+	}
+
+	return FCos;
+}
+
+vector<vector<double>> createF(vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, vector<double> mu, vector<double> sigma, double omega, int n) {
+	vector<double> FCos = createFCos(nvtr, xyz, mu, sigma, omega, n);
+	vector<double> FSin = createFSin(nvtr, xyz, mu, sigma, omega, n);
+	vector<vector<double>> res;
+	for (int i = 0; i < n; ++i) {
+		res.push_back({ FSin[i], FCos[i] });
+	}
+	return res;
+}
+
+vector<vector<vector<double>>> converter(matrix LLT) {
+	vector<vector<vector<double>>> dense;
+	int size = LLT.di.size();
+	dense.resize(size);
+	for (int i = 0; i < size; ++i) {
+		dense[i].resize(size);
+	}
+
+
+	for (int i = 0; i < size; ++i) {
+		for (int j = 0; j < size; ++j) {
+			dense[i][j].resize(2);
+			dense[i][j][0] = 0.;
+			dense[i][j][1] = 0.;
+		}
+	}
+
+	for (int i = 0; i < size; ++i) {
+		dense[i][i][0] = LLT.di[i][0];
+		dense[i][i][1] = LLT.di[i][1];
+	}
+	for (int i = 1; i < size; ++i) {
+		int elemPos = LLT.li[i];
+		for (; elemPos < LLT.li[i + 1]; ++elemPos) {
+			dense[i][LLT.lj[elemPos]][0] = LLT.al[elemPos][0];
+			dense[i][LLT.lj[elemPos]][1] = LLT.al[elemPos][1];
+			//симметрично
+			dense[LLT.lj[elemPos]][i][0] = LLT.al[elemPos][0];
+			dense[LLT.lj[elemPos]][i][1] = LLT.al[elemPos][1];
+		}
+	}
+	return dense;
+}
+
+void lu(int size, vector<vector<vector<double>>> A, vector<vector<double>>& b) {
+	for (int i = 1; i < size; ++i)
+	{
+		A[i][0] = A[i][0] / A[0][0];
+	}
+
+	for (int i = 1; i < size; ++i)
+	{
+		for (int j = 1; j < size; ++j)
+		{
+			if (i > j)
+			{
+				vector<double> sum = { 0, 0 };
+				for (int k = 0; k < j; k++)
+				{
+					sum = sum + A[i][k] * A[k][j];
+				}
+				A[i][j] = (A[i][j] - sum) / A[j][j];
+			}
+
+			else
+			{
+				vector<double> sum = { 0, 0 };
+				for (int k = 0; k < i; k++)
+				{
+					sum = sum + A[i][k] * A[k][j];
+				}
+				A[i][j] = A[i][j] - sum;
+			}
+		}
+	}
+
+	for (int i = 1; i < size; ++i)
+	{
+		vector<double> sum = { 0, 0 };
+		for (int k = 0; k < i; ++k)
+		{
+			sum = sum + b[k] * A[i][k];
+		}
+		b[i] = b[i] - sum;
+	}
+
+	b[size - 1] = b[size - 1] / A[size - 1][size - 1];
+
+	for (int i = size - 2; i >= 0; --i)
+	{
+		vector<double> sum = { 0, 0 };
+		for (int k = i + 1; k < size; ++k)
+		{
+			sum = sum + A[i][k] * b[k];
+		}
+		b[i] = (b[i] - sum) / A[i][i];
+	}
+}
+
+void conditions(vector<vector<vector<double>>>& matr, vector<vector<double>>& F, vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, const vector<double> &x, const vector<double> &y, const vector<double> &z) {
+	
+	for (int elemNum = 0; elemNum < nvtr.size(); ++elemNum) {
+		for (int i = 0; i < 12; ++i) {
+			if ((xyz[nvtr[elemNum][i].second.first][2] == z[0] &&
+					xyz[nvtr[elemNum][i].second.second][2] == z[0] &&
+					xyz[nvtr[elemNum][i].second.first][0] == xyz[nvtr[elemNum][i].second.second][0]) ||
+
+					(xyz[nvtr[elemNum][i].second.first][2] == z[z.size() - 1] &&
+					xyz[nvtr[elemNum][i].second.second][2] == z[z.size() - 1] &&
+					xyz[nvtr[elemNum][i].second.first][0] == xyz[nvtr[elemNum][i].second.second][0]) ||
+
+					(xyz[nvtr[elemNum][i].second.first][0] == x[0] &&
+					xyz[nvtr[elemNum][i].second.second][0] == x[0] &&
+					xyz[nvtr[elemNum][i].second.first][2] == xyz[nvtr[elemNum][i].second.second][2]) ||
+
+					(xyz[nvtr[elemNum][i].second.first][0] == x[x.size() - 1] &&
+					xyz[nvtr[elemNum][i].second.second][0] == x[x.size() - 1] &&
+					xyz[nvtr[elemNum][i].second.first][2] == xyz[nvtr[elemNum][i].second.second][2])) {
+				F[nvtr[elemNum][i].first][0] = funcSin((xyz[nvtr[elemNum][i].second.second][0] + xyz[nvtr[elemNum][i].second.first][0]) / 2.,
+														(xyz[nvtr[elemNum][i].second.second][1] + xyz[nvtr[elemNum][i].second.first][1]) / 2.,
+														(xyz[nvtr[elemNum][i].second.second][2] + xyz[nvtr[elemNum][i].second.first][2]) / 2.)[1] * 1e10;
+				F[nvtr[elemNum][i].first][1] = 0;
+				matr[nvtr[elemNum][i].first][nvtr[elemNum][i].first][0] = 1e10;
+			}
+			if ((xyz[nvtr[elemNum][i].second.first][2] == z[0] &&
+					xyz[nvtr[elemNum][i].second.second][2] == z[0] &&
+					xyz[nvtr[elemNum][i].second.first][1] == xyz[nvtr[elemNum][i].second.second][1]) ||
+					(xyz[nvtr[elemNum][i].second.first][2] == z[z.size() - 1] &&
+					xyz[nvtr[elemNum][i].second.second][2] == z[z.size() - 1] &&
+					xyz[nvtr[elemNum][i].second.first][1] == xyz[nvtr[elemNum][i].second.second][1]) ||
+					(xyz[nvtr[elemNum][i].second.first][0] == x[0] &&
+					xyz[nvtr[elemNum][i].second.second][0] == x[0] &&
+					xyz[nvtr[elemNum][i].second.first][1] == xyz[nvtr[elemNum][i].second.second][1]) ||
+					(xyz[nvtr[elemNum][i].second.first][0] == x[x.size() - 1] &&
+					xyz[nvtr[elemNum][i].second.second][0] == x[x.size() - 1] &&
+					xyz[nvtr[elemNum][i].second.first][1] == xyz[nvtr[elemNum][i].second.second][1])) {
+				F[nvtr[elemNum][i].first][0] = 0;
+				F[nvtr[elemNum][i].first][1] = 0;
+				matr[nvtr[elemNum][i].first][nvtr[elemNum][i].first][0] = 1e10;
+			}
+
+		}
+	}
+
+	F[4][0] = 0;
+	F[4][1] = 0;
+	F[5][0] = 0;
+	F[5][1] = 0;
+	F[6][0] = 0;
+	F[6][1] = 0;
+	F[7][0] = 0;
+	F[7][1] = 0;
+	F[22][0] = 0;
+	F[22][1] = 0;
+	F[25][0] = 0;
+	F[25][1] = 0;
+	F[28][0] = 0;
+	F[28][1] = 0;
+	F[31][0] = 0;
+	F[31][1] = 0;
+
+	matr[4][4][0] = 1e10;
+	matr[5][5][0] = 1e10;
+	matr[6][6][0] = 1e10;
+	matr[7][7][0] = 1e10;
+	matr[22][22][0] = 1e10;
+	matr[25][25][0] = 1e10;
+	matr[28][28][0] = 1e10;
+	matr[31][31][0] = 1e10;
+}
+
+int main() {
+	ifstream fin("x.txt");
+	vector<double> x, y, z, mu, omega, sigma;
+	while (!fin.eof()) {
+		double tmp;
+		fin >> tmp;
+		x.emplace_back(tmp);
+	}
+	fin.close();
+	fin.open("y.txt");
+	while (!fin.eof()) {
+		double tmp;
+		fin >> tmp;
+		y.emplace_back(tmp);
+	}
+	fin.close();
+	fin.open("z.txt");
+	while (!fin.eof()) {
+		double tmp;
+		fin >> tmp;
+		z.emplace_back(tmp);
+	}
+	fin.close();
+	fin.open("mu.txt");
+	while (!fin.eof()) {
+		double tmp;
+		fin >> tmp;
+		mu.push_back(tmp);
+	}
+	fin.close();
+	fin.open("sigma.txt");
+	while (!fin.eof()) {
+		double tmp;
+		fin >> tmp;
+		sigma.push_back(tmp);
+	}
+	fin.close();
+	fin.open("omega.txt");
+	while (!fin.eof()) {
+		double tmp;
+		fin >> tmp;
+		omega.push_back(tmp);
+	}
+	fin.close();
+
+
+	int n = (x.size() - 1) * y.size() * z.size() + x.size() * y.size() * (z.size() - 1) + x.size() * (y.size() - 1) * z.size();
+
+	vector<vector<double>> xyz = formxyz(x, y, z);
+	vector<vector<pair<int, pair<int, int>>>> nvtr = formnvtr(x, y, z);
+
+	matrix A = createGlobalMG(mu, sigma, omega[0], nvtr, xyz, n);
+	vector<vector<double>> F = createF(nvtr, xyz, mu, sigma, omega[0], n);
+
+	vector<vector<vector<double>>> LLT = converter(A);
+	conditions(LLT, F, nvtr, xyz, x, y, z);
+
+	lu(n, LLT, F);
+	for (int i = 0; i < F.size(); ++i) {
+		cout << i << ": " << F[i][0] << '\t' << F[i][1] << endl;
+	}
 	return 0;
 }
