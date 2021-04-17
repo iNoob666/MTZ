@@ -479,130 +479,7 @@ vector<vector<double>> createF(vector<vector<pair<int, pair<int, int>>>> nvtr, v
 	return res;
 }
 
-vector<vector<vector<double>>> converter(matrix LLT) {
-	vector<vector<vector<double>>> dense;
-	int size = LLT.di.size();
-	dense.resize(size);
-	for (int i = 0; i < size; ++i) {
-		dense[i].resize(size);
-	}
-
-
-	for (int i = 0; i < size; ++i) {
-		for (int j = 0; j < size; ++j) {
-			dense[i][j].resize(2);
-			dense[i][j][0] = 0.;
-			dense[i][j][1] = 0.;
-		}
-	}
-
-	for (int i = 0; i < size; ++i) {
-		dense[i][i][0] = LLT.di[i][0];
-		dense[i][i][1] = LLT.di[i][1];
-	}
-	for (int i = 1; i < size; ++i) {
-		int elemPos = LLT.li[i];
-		for (; elemPos < LLT.li[i + 1]; ++elemPos) {
-			dense[i][LLT.lj[elemPos]][0] = LLT.al[elemPos][0];
-			dense[i][LLT.lj[elemPos]][1] = LLT.al[elemPos][1];
-			//симметрично
-			dense[LLT.lj[elemPos]][i][0] = LLT.al[elemPos][0];
-			dense[LLT.lj[elemPos]][i][1] = LLT.al[elemPos][1];
-		}
-	}
-	return dense;
-}
-
-void lu(int size, vector<vector<vector<double>>> A, vector<vector<double>>& b) {
-	for (int i = 1; i < size; ++i)
-	{
-		A[i][0] = A[i][0] / A[0][0];
-	}
-
-	for (int i = 1; i < size; ++i)
-	{
-		for (int j = 1; j < size; ++j)
-		{
-			if (i > j)
-			{
-				vector<double> sum = { 0, 0 };
-				for (int k = 0; k < j; k++)
-				{
-					sum = sum + A[i][k] * A[k][j];
-				}
-				A[i][j] = (A[i][j] - sum) / A[j][j];
-			}
-
-			else
-			{
-				vector<double> sum = { 0, 0 };
-				for (int k = 0; k < i; k++)
-				{
-					sum = sum + A[i][k] * A[k][j];
-				}
-				A[i][j] = A[i][j] - sum;
-			}
-		}
-	}
-
-	for (int i = 1; i < size; ++i)
-	{
-		vector<double> sum = { 0, 0 };
-		for (int k = 0; k < i; ++k)
-		{
-			sum = sum + b[k] * A[i][k];
-		}
-		b[i] = b[i] - sum;
-	}
-
-	b[size - 1] = b[size - 1] / A[size - 1][size - 1];
-
-	for (int i = size - 2; i >= 0; --i)
-	{
-		vector<double> sum = { 0, 0 };
-		for (int k = i + 1; k < size; ++k)
-		{
-			sum = sum + A[i][k] * b[k];
-		}
-		b[i] = (b[i] - sum) / A[i][i];
-	}
-}
-
-void conditions1(vector<vector<vector<double>>>& matr, vector<vector<double>>& F, vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, const vector<double> &x, const vector<double> &y, const vector<double> &z) {
-	
-	for (int elemNum = 0; elemNum < nvtr.size(); ++elemNum) {
-		for (int i = 0; i < 12; ++i) {
-			if ((xyz[nvtr[elemNum][i].second.first][2] == z[0] &&
-					xyz[nvtr[elemNum][i].second.second][2] == z[0]) ||
-
-					(xyz[nvtr[elemNum][i].second.first][2] == z[z.size() - 1] &&
-					xyz[nvtr[elemNum][i].second.second][2] == z[z.size() - 1]) ||
-
-					(xyz[nvtr[elemNum][i].second.first][0] == x[0] &&
-					xyz[nvtr[elemNum][i].second.second][0] == x[0]) ||
-
-					(xyz[nvtr[elemNum][i].second.first][0] == x[x.size() - 1] &&
-					xyz[nvtr[elemNum][i].second.second][0] == x[x.size() - 1]) ||
-
-					(xyz[nvtr[elemNum][i].second.first][1] == y[0] &&
-					xyz[nvtr[elemNum][i].second.second][1] == y[0]) ||
-
-					(xyz[nvtr[elemNum][i].second.first][1] == y[y.size() - 1] &&
-					xyz[nvtr[elemNum][i].second.second][1] == y[y.size() - 1])) {
-				if (xyz[nvtr[elemNum][i].second.first][1] != xyz[nvtr[elemNum][i].second.second][1])
-					F[nvtr[elemNum][i].first][0] = funcSin((xyz[nvtr[elemNum][i].second.second][0] + xyz[nvtr[elemNum][i].second.first][0]) / 2.,
-						(xyz[nvtr[elemNum][i].second.second][1] + xyz[nvtr[elemNum][i].second.first][1]) / 2.,
-						(xyz[nvtr[elemNum][i].second.second][2] + xyz[nvtr[elemNum][i].second.first][2]) / 2.)[1] * 1e10;
-				else
-					F[nvtr[elemNum][i].first][0] = 0;
-				F[nvtr[elemNum][i].first][1] = 0;
-				matr[nvtr[elemNum][i].first][nvtr[elemNum][i].first][0] = 1e10;
-			}
-		}
-	}
-}
-
-void conditions2(matrix &matr, vector<vector<double>>& F, vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, const vector<double>& x, const vector<double>& y, const vector<double>& z) {
+void conditions(matrix &matr, vector<vector<double>>& F, vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, const vector<double>& x, const vector<double>& y, const vector<double>& z) {
 
 	for (int elemNum = 0; elemNum < nvtr.size(); ++elemNum) {
 		for (int i = 0; i < 12; ++i) {
@@ -636,18 +513,16 @@ void conditions2(matrix &matr, vector<vector<double>>& F, vector<vector<pair<int
 	}
 }
 
-vector<double> dotProduct(const vector<vector<double>>& a, const vector<vector<double>>& b) {
+double dotProduct(const vector<vector<double>>& a, const vector<vector<double>>& b) {
 	if (a.size() != b.size()) {
 		exit(1);
 	}
 	else {
-		vector<double> res = { 0, 0 };
+		double res = 0;
 		int n = a.size();
 		for (int i = 0; i < n; ++i) {
-			
-			vector<double> tmp = { a[i][0], -a[i][1] };
-			tmp = tmp * b[i];
-			res = res + tmp;
+			double tmp =  a[i][0] * b[i][0] + a[i][1] * b[i][1] ;
+			res += tmp;
 		}
 		return res;
 	}
@@ -726,7 +601,6 @@ vector<vector<double>> operator+(const vector<vector<double>>& a, const vector<v
 	return res;
 }
 
-//ѕод вопросом о точке остановки, методе сравнени€, что должно оставатьс€ после скал€рного произведени€ комплексных чисел?
 void los(matrix &A, vector<vector<double>>& b, vector<vector<double>>& x0, double eps) {
 	vector<vector<double>> r0, z0, p0;
 
@@ -734,35 +608,25 @@ void los(matrix &A, vector<vector<double>>& b, vector<vector<double>>& x0, doubl
 	p0 = r0;
 	z0 = A * p0;
 
-	vector<double> absB = dotProduct(b, b);
-	vector<double> absR0 = dotProduct(p0, p0);
-	vector<double> nevyazka = absR0 / absB;
-	double absnevyazka = sqrt(nevyazka[0] * nevyazka[0] + nevyazka[1] * nevyazka[1]);
-	while (absnevyazka > eps) {
-		cout << absnevyazka << endl;
-		vector<double> scalarZ0 = dotProduct(z0, z0);
+	double absB = dotProduct(b, b);
+	double absR0 = dotProduct(p0, p0);
+	double nevyazka = absR0 / absB;
+	while (abs(nevyazka) > eps) {
+		cout << abs(nevyazka) << endl;
+		double scalarZ0 = dotProduct(z0, z0);
 
-		vector<double> alphaK = dotProduct(z0, r0) / scalarZ0;
+		double alphaK = dotProduct(z0, r0) / scalarZ0;
 
 		absR0 = absR0 - alphaK * alphaK * scalarZ0;
+		nevyazka = absR0 / absB;
 
 		x0 = x0 + alphaK * p0;
 		r0 = r0 - alphaK * z0;
-		vector<double> betaK = dotProduct(z0, A * r0) / scalarZ0;
-		betaK[0] = -betaK[0];
-		betaK[1] = -betaK[1];
+		double betaK = dotProduct(z0, A * r0) / scalarZ0;
 		p0 = r0 + betaK * p0;
 		z0 = A * r0 + betaK * z0;
-		/*for (int i = 0; i < x0.size(); ++i) {
-			cout << i << ": " << x0[i][0] << endl;
-		}
-		cout << endl << endl;*/
 	}
-	/*vector<vector<double>> res = A * x0;
-	cout << endl << endl;
-	for (int i = 0; i < res.size(); ++i) {
-		cout << i << ": " << res[i][0] << "\t\t" << x0[i][0] << "\t\t" << b[i][0] << endl;
-	}*/
+	cout << abs(nevyazka) << endl;
 }
 
 int main() {
@@ -820,31 +684,17 @@ int main() {
 	matrix A = createGlobalMG(mu, sigma, omega[0], nvtr, xyz, n);
 	vector<vector<double>> F = createF(nvtr, xyz, mu, sigma, omega[0], n);
 
-	conditions2(A, F, nvtr, xyz, x, y, z);
-	//vector<vector<vector<double>>> LLT = converter(A);//test
+	conditions(A, F, nvtr, xyz, x, y, z);
+
 	vector<vector<double>> x0;
 	for (int i = 0; i < n; ++i) {
-		x0.push_back({ 1, 1 });
+		x0.push_back({ 1., 1. });
 	}
 
 	los(A, F, x0, eps);
 
-	/*for (int i = 0; i < LLT.size(); ++i) {
-		for (int j = 0; j < LLT.size(); ++j) {
-			cout << "( " << LLT[i][j][0] << " ; " << LLT[i][j][1] << " )\t";
-		}
-		cout << endl;
-	}*/
-
-	/*vector<vector<vector<double>>> LLT = converter(A);
-	conditions1(LLT, F, nvtr, xyz, x, y, z);
-
-	lu(n, LLT, F);*/
 	for (int i = 0; i < x0.size(); ++i) {
 		cout << i << ": " << x0[i][0] << "\t\t" << x0[i][1] << endl;
 	}
-	/*for (int i = 0; i < F.size(); ++i) {
-		cout << i << ": " << F[i][0] << "\t\t" << F[i][1] << endl;
-	}*/
 	return 0;
 }
