@@ -41,7 +41,26 @@ double G3T[4][4] = {
    {1, 2, -1, -2},
 };
 
-vector<double> operator/(const vector<double> &a, const vector<double> &b) {
+struct matrix // Структура для матрицы, которая хранится в
+	// разряженном строчно-столбцовом формате относительно блочных элементов (размер блока 2x2)
+{
+	vector<vector<double>> di;// диагональные элементы
+	vector<vector<double>> al;// элементы нижнего тругольника
+	vector<int> li;// профиль матрицы
+	vector<int> lj;// портрет матрицы
+};
+
+struct LUmatrix // Структура для матрицы, которая хранится в
+	// разряженном строчно-столбцовом формате относительно блочных элементов (размер блока 2x2)
+{
+	vector<double> di;// диагональные элементы
+	vector<double> al;// элементы нижнего тругольника
+	vector<double> au;// элементы верхнего тругольника
+	vector<int> li;// профиль матрицы
+	vector<int> lj;// портрет матрицы
+};
+
+vector<double> operator/(const vector<double>& a, const vector<double>& b) {
 	double coefB = b[0] * b[0] + b[1] * b[1];
 	vector<double> oppositeB = { b[0] / coefB, -(b[1] / coefB) };
 	return { a[0] * oppositeB[0] - a[1] * oppositeB[1], a[0] * oppositeB[1] + a[1] * oppositeB[0] };
@@ -59,16 +78,295 @@ vector<double> operator-(const vector<double>& a, const vector<double>& b) {
 	return { a[0] - b[0], a[1] - b[1] };
 }
 
+vector<vector<double>> operator*(const matrix& A, const vector<vector<double>>& b) {
+	if (A.di.size() != b.size()) {
+		exit(1);
+	}
+	else {
+		vector<vector<double>> res;
+		int n = (int)A.di.size();
+		res.resize(n);
+		for (auto& elem : res) {
+			elem.push_back(0);
+			elem.push_back(0);
+		}
 
-struct matrix // Структура для матрицы, которая хранится в
-	// разряженном строчно-столбцовом формате относительно блочных элементов (размер блока 2x2) 
-{
-	vector<vector<double>> di;// диагональные элементы
-	vector<vector<double>> al;// элементы нижнего тругольника
-	vector<int> li;// профиль матрицы
-	vector<int> lj;// портрет матрицы
-};
+		for (int i = 0; i < n; ++i) {
+			res[i] = res[i] + A.di[i] * b[i];
+		}
 
+		for (int i = 1; i < n; ++i) {
+			int elemPos = A.li[i];
+			for (; elemPos < A.li[i + 1]; ++elemPos) {
+				res[i] = res[i] + A.al[elemPos] * b[A.lj[elemPos]];
+				res[A.lj[elemPos]] = res[A.lj[elemPos]] + A.al[elemPos] * b[i];
+			}
+		}
+		return res;
+	}
+}
+
+vector<vector<double>> operator-(const vector<vector<double>>& a, const vector<vector<double>>& b) {
+	if (a.size() != b.size()) {
+		exit(1);
+	}
+	else {
+		vector<vector<double>> res;
+		int n = (int)a.size();
+		res.resize(n);
+		for (int i = 0; i < n; ++i) {
+			res[i].push_back(a[i][0] - b[i][0]);
+			res[i].push_back(a[i][1] - b[i][1]);
+		}
+
+		return res;
+	}
+}
+
+vector<vector<double>> operator*(const double& coef, const vector<vector<double>>& b) {
+	vector<vector<double>> res;
+	int n = (int)b.size();
+	res.reserve(n);
+	for (int i = 0; i < n; ++i) {
+		res.push_back({ coef * b[i][0], coef * b[i][1] });
+	}
+	return res;
+}
+
+vector<vector<double>> operator*(const vector<double>& coef, const vector<vector<double>>& b) {
+	vector<vector<double>> res;
+	int n = (int)b.size();
+	res.reserve(n);
+	for (int i = 0; i < n; ++i) {
+		res.push_back(coef * b[i]);
+	}
+	return res;
+}
+
+vector<vector<double>> operator+(const vector<vector<double>>& a, const vector<vector<double>>& b) {
+	vector<vector<double>> res;
+	int n = (int)b.size();
+	res.resize(n);
+	for (int i = 0; i < n; ++i) {
+		res[i] = a[i] + b[i];
+	}
+	return res;
+}
+
+LUmatrix converter(const matrix& base) {
+	LUmatrix res;
+
+	size_t size = base.di.size();
+	size_t newSize = size * 2;
+
+	res.di.resize(newSize);
+	res.li.resize(newSize + 1);
+
+	res.li[0] = 0;
+	res.li[1] = 0;
+
+	vector<double> al1;
+	vector<double> al2;
+	vector<double> au1;
+	vector<double> au2;
+	vector<int> li;
+	vector<int> lj1;
+	vector<int> lj2;
+
+	for (int line = 0; line < size; ++line) {
+		res.di[line * 2] = base.di[line][0];
+		res.di[line * 2 + 1] = base.di[line][0];
+
+		int i0 = base.li[line];
+		int i1 = base.li[line + 1];
+		for (int elemN = i0; elemN < i1; ++elemN) {
+			int column = base.lj[elemN];
+
+			al1.push_back(base.al[elemN][0]);
+			al1.push_back(-base.al[elemN][1]);
+			al2.push_back(base.al[elemN][1]);
+			al2.push_back(base.al[elemN][0]);
+
+			au1.push_back(base.al[elemN][0]);
+			au1.push_back(base.al[elemN][1]);
+			au2.push_back(-base.al[elemN][1]);
+			au2.push_back(base.al[elemN][0]);
+
+			lj1.push_back(column * 2);
+			lj1.push_back(column * 2 + 1);
+			lj2.push_back(column * 2);
+			lj2.push_back(column * 2 + 1);
+		}
+		//диагональные элементы
+		al2.push_back(base.di[line][1]);
+		au2.push_back(-base.di[line][1]);
+		lj2.push_back(line * 2);
+		//заполни массив li
+		unsigned int count1 = al1.size();
+		unsigned int count2 = al2.size();
+		res.li[line * 2 + 1] += (int)count1;
+		for (int i = line * 2 + 1; i < newSize; ++i) {
+			res.li[i + 1] += (int)count1;
+			res.li[i + 1] += (int)count2;
+		}
+		//перенос в результирующую структуру, и очищение массивов
+		res.al.insert(res.al.end(), al1.begin(), al1.end());
+		res.al.insert(res.al.end(), al2.begin(), al2.end());
+		res.au.insert(res.au.end(), au1.begin(), au1.end());
+		res.au.insert(res.au.end(), au2.begin(), au2.end());
+		res.lj.insert(res.lj.end(), lj1.begin(), lj1.end());
+		res.lj.insert(res.lj.end(), lj2.begin(), lj2.end());
+		al1.clear();
+		al2.clear();
+		au1.clear();
+		au2.clear();
+		lj1.clear();
+		lj2.clear();
+	}
+
+	return res;
+}
+
+vector<vector<double>> forward(const LUmatrix& A, const vector<vector<double>>& b) {
+	vector<vector<double>> res;
+	res.resize(b.size());
+	for (auto& elem : res) {
+		elem.resize(2);
+	}
+
+	int size = (int)A.di.size();
+	for (int i = 0; i < size; ++i) {
+		double sum = 0;
+		int i0 = A.li[i], i1 = A.li[i + 1];
+		for (int k = i0; k < i1; ++k) {
+			int j = A.lj[k];
+			sum += A.al[k] * res[j / 2][j % 2];
+		}
+		res[i / 2][i % 2] = (b[i / 2][i % 2] - sum) / A.di[i];
+	}
+	return res;
+}
+
+vector<vector<double>> backward(const LUmatrix& A, const vector<vector<double>>& b) {
+	vector<vector<double>> res = b;
+
+	int size = (int)A.di.size();
+	for (int i = size - 1; i >= 0; --i) {
+		int i0 = A.li[i], i1 = A.li[i + 1] - 1;
+		res[i / 2][i % 2] /= A.di[i];
+		for (int k = i1; k >= i0; --k) {
+			int j = A.lj[k];
+			res[j / 2][j % 2] -= A.au[k] * res[i / 2][i % 2];
+		}
+	}
+
+	return res;
+}
+
+LUmatrix luFactorization(const LUmatrix& base) {
+	LUmatrix res;
+
+	size_t size = base.di.size();
+
+	res.di.resize(size);
+
+	res.li = base.li;
+	res.lj = base.lj;
+	res.al.resize(base.al.size());
+	res.au.resize(base.au.size());
+
+	for (int line = 0; line < size; ++line) {
+		double sumD = 0;
+
+		int i0 = base.li[line];
+		int i1 = base.li[line + 1];
+		for (int elemN = i0; elemN < i1; ++elemN) {
+			double sumL = 0, sumU = 0;
+
+			int column = base.lj[elemN];
+
+			int j0 = base.li[column];
+			int j1 = base.li[column + 1];
+
+			int kl = i0, ku = j0;
+
+			for (; kl < i1 && ku < j1;) {
+				int j_kl = base.lj[kl];
+				int j_ku = base.lj[ku];
+
+				if (j_kl == j_ku) {
+					sumU += res.al[kl] * res.au[ku];
+					sumL += res.au[kl] * res.al[ku];
+					kl++;
+					ku++;
+				}
+				if (j_kl > j_ku)
+					ku++;
+				if (j_kl < j_ku)
+					kl++;
+			}
+			res.au[elemN] = base.au[elemN] - sumL;
+			res.al[elemN] = base.al[elemN] - sumU;
+			res.al[elemN] /= res.di[column];
+
+			sumD += res.al[elemN] * res.au[elemN];
+		}
+		res.di[line] = base.di[line] - sumD;
+	}
+
+	return res;
+}
+
+double dotProduct(const vector<vector<double>>& a, const vector<vector<double>>& b) {
+	if (a.size() != b.size()) {
+		exit(1);
+	}
+	else {
+		double res = 0;
+		int n = (int)a.size();
+		for (int i = 0; i < n; ++i) {
+			double tmp = a[i][0] * b[i][0] + a[i][1] * b[i][1];
+			res += tmp;
+		}
+		return res;
+	}
+}
+
+void los(matrix& A, vector<vector<double>>& b, vector<vector<double>>& x0, double eps) {
+	LUmatrix LU = converter(A);
+	LU = luFactorization(LU);
+	int maxitter = 10000;
+	int itterCount = 0;
+	vector<vector<double>> r0 = b - A * x0;
+	r0 = forward(LU, r0);
+	vector<vector<double>> z0 = backward(LU, r0);
+	vector<vector<double>> p0 = forward(LU, A * z0);
+	double dotB = dotProduct(b, b);
+	double nevyazka = dotProduct(r0, r0);
+
+	while (itterCount < maxitter && nevyazka >= eps) {
+		cout << nevyazka << endl;
+		double dotP = dotProduct(p0, p0);
+		double alphaK = dotProduct(p0, r0) / dotP;
+		x0 = x0 + alphaK * z0;
+		r0 = r0 - alphaK * p0;
+
+		nevyazka = dotProduct(r0, r0);
+
+		vector<vector<double>> LAU = backward(LU, r0);
+		vector<vector<double>> Ur0 = LAU;
+		LAU = A * LAU;
+		LAU = forward(LU, LAU);
+		double betaK = -dotProduct(p0, LAU) / dotP;
+
+		z0 = Ur0 + betaK * z0;
+		p0 = LAU + betaK * p0;
+
+		itterCount++;
+	}
+	cout << nevyazka << endl;
+	cout << "count of itterations: " << itterCount << endl;
+}
 
 vector<vector<double>> formxyz(const vector<double >& x, const vector<double >& y, const vector<double >& z) {
 	ofstream fout("xyz.txt");
@@ -513,122 +811,6 @@ void conditions(matrix &matr, vector<vector<double>>& F, vector<vector<pair<int,
 	}
 }
 
-double dotProduct(const vector<vector<double>>& a, const vector<vector<double>>& b) {
-	if (a.size() != b.size()) {
-		exit(1);
-	}
-	else {
-		double res = 0;
-		int n = a.size();
-		for (int i = 0; i < n; ++i) {
-			double tmp =  a[i][0] * b[i][0] + a[i][1] * b[i][1] ;
-			res += tmp;
-		}
-		return res;
-	}
-}
-
-vector<vector<double>> operator*(const matrix& A, const vector<vector<double>> &b) {
-	if (A.di.size() != b.size()) {
-		exit(1);
-	}
-	else {
-		vector<vector<double>> res;
-		int n = A.di.size();
-		res.resize(n);
-		for (auto& elem : res) {
-			elem.push_back(0);
-			elem.push_back(0);
-		}
-
-		for (int i = 0; i < n; ++i) {
-			res[i] = res[i] + A.di[i] * b[i];
-		}
-
-		for (int i = 1; i < n; ++i) {
-			int elemPos = A.li[i];
-			for (; elemPos < A.li[i + 1]; ++elemPos) {
-				res[i] = res[i] + A.al[elemPos] * b[A.lj[elemPos]];
-				res[A.lj[elemPos]] = res[A.lj[elemPos]] + A.al[elemPos] * b[i];
-			}
-		}
-		return res;
-	}
-}
-
-vector<vector<double>> operator-(const vector<vector<double>> &a, const vector<vector<double>> &b) {
-	if (a.size() != b.size()) {
-		exit(1);
-	}
-	else {
-		vector<vector<double>> res;
-		int n = a.size();
-		res.resize(n);
-		for (int i = 0; i < n; ++i) {
-			res[i].push_back(a[i][0] - b[i][0]);
-			res[i].push_back(a[i][1] - b[i][1]);
-		}
-
-		return res;
-	}
-}
-
-vector<vector<double>> operator*(const double& coef, const vector<vector<double>>& b) {
-	vector<vector<double>> res;
-	int n = b.size();
-	for (int i = 0; i < n; ++i) {
-		res.push_back({ coef * b[i][0], coef * b[i][1] });
-	}
-	return res;
-}
-
-vector<vector<double>> operator*(const vector<double>& coef, const vector<vector<double>>& b) {
-	vector<vector<double>> res;
-	int n = b.size();
-	for (int i = 0; i < n; ++i) {
-		res.push_back(coef * b[i]);
-	}
-	return res;
-}
-
-vector<vector<double>> operator+(const vector<vector<double>>& a, const vector<vector<double>>& b) {
-	vector<vector<double>> res;
-	int n = b.size();
-	res.resize(n);
-	for (int i = 0; i < n; ++i) {
-		res[i] = a[i] + b[i];
-	}
-	return res;
-}
-
-void los(matrix &A, vector<vector<double>>& b, vector<vector<double>>& x0, double eps) {
-	vector<vector<double>> r0, z0, p0;
-
-	r0 = b - A * x0;
-	p0 = r0;
-	z0 = A * p0;
-
-	double absB = dotProduct(b, b);
-	double absR0 = dotProduct(p0, p0);
-	double nevyazka = absR0 / absB;
-	while (abs(nevyazka) > eps) {
-		cout << abs(nevyazka) << endl;
-		double scalarZ0 = dotProduct(z0, z0);
-
-		double alphaK = dotProduct(z0, r0) / scalarZ0;
-
-		absR0 = absR0 - alphaK * alphaK * scalarZ0;
-		nevyazka = absR0 / absB;
-
-		x0 = x0 + alphaK * p0;
-		r0 = r0 - alphaK * z0;
-		double betaK = dotProduct(z0, A * r0) / scalarZ0;
-		p0 = r0 + betaK * p0;
-		z0 = A * r0 + betaK * z0;
-	}
-	cout << abs(nevyazka) << endl;
-}
-
 int main() {
 	ifstream fin("x.txt");
 	vector<double> x, y, z, mu, omega, sigma;
@@ -674,7 +856,7 @@ int main() {
 	}
 	fin.close();
 
-	double eps = 1e-8;
+	double eps = 1e-16;
 
 	int n = (x.size() - 1) * y.size() * z.size() + x.size() * y.size() * (z.size() - 1) + x.size() * (y.size() - 1) * z.size();
 
@@ -688,7 +870,7 @@ int main() {
 
 	vector<vector<double>> x0;
 	for (int i = 0; i < n; ++i) {
-		x0.push_back({ 1., 1. });
+		x0.push_back({ 0, 0 });
 	}
 
 	los(A, F, x0, eps);
