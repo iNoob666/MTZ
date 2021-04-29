@@ -71,7 +71,13 @@ vector<double> operator*(const vector<double>& a, const vector<double>& b) {
 }
 
 vector<double> operator+(const vector<double>& a, const vector<double>& b) {
-	return { a[0] + b[0], a[1] + b[1] };
+	vector<double> res;
+	int size = a.size();
+	res.resize(size);
+	for (int i = 0; i < size; ++i) {
+		res[i] = a[i] + b[i];
+	}
+	return res;
 }
 
 vector<double> operator-(const vector<double>& a, const vector<double>& b) {
@@ -79,48 +85,38 @@ vector<double> operator-(const vector<double>& a, const vector<double>& b) {
 }
 
 vector<vector<double>> operator*(const matrix& A, const vector<vector<double>>& b) {
-	if (A.di.size() != b.size()) {
-		exit(1);
+	vector<vector<double>> res;
+	int n = (int)A.di.size();
+	res.resize(n);
+	for (auto& elem : res) {
+		elem.push_back(0);
+		elem.push_back(0);
 	}
-	else {
-		vector<vector<double>> res;
-		int n = (int)A.di.size();
-		res.resize(n);
-		for (auto& elem : res) {
-			elem.push_back(0);
-			elem.push_back(0);
-		}
 
-		for (int i = 0; i < n; ++i) {
-			res[i] = res[i] + A.di[i] * b[i];
-		}
-
-		for (int i = 1; i < n; ++i) {
-			int elemPos = A.li[i];
-			for (; elemPos < A.li[i + 1]; ++elemPos) {
-				res[i] = res[i] + A.al[elemPos] * b[A.lj[elemPos]];
-				res[A.lj[elemPos]] = res[A.lj[elemPos]] + A.al[elemPos] * b[i];
-			}
-		}
-		return res;
+	for (int i = 0; i < n; ++i) {
+		res[i] = res[i] + A.di[i] * b[i];
 	}
+
+	for (int i = 1; i < n; ++i) {
+		int elemPos = A.li[i];
+		for (; elemPos < A.li[i + 1]; ++elemPos) {
+			res[i] = res[i] + A.al[elemPos] * b[A.lj[elemPos]];
+			res[A.lj[elemPos]] = res[A.lj[elemPos]] + A.al[elemPos] * b[i];
+		}
+	}
+	return res;
 }
 
 vector<vector<double>> operator-(const vector<vector<double>>& a, const vector<vector<double>>& b) {
-	if (a.size() != b.size()) {
-		exit(1);
+	vector<vector<double>> res;
+	int n = (int)a.size();
+	res.resize(n);
+	for (int i = 0; i < n; ++i) {
+		res[i].push_back(a[i][0] - b[i][0]);
+		res[i].push_back(a[i][1] - b[i][1]);
 	}
-	else {
-		vector<vector<double>> res;
-		int n = (int)a.size();
-		res.resize(n);
-		for (int i = 0; i < n; ++i) {
-			res[i].push_back(a[i][0] - b[i][0]);
-			res[i].push_back(a[i][1] - b[i][1]);
-		}
 
-		return res;
-	}
+	return res;
 }
 
 vector<vector<double>> operator*(const double& coef, const vector<vector<double>>& b) {
@@ -149,6 +145,14 @@ vector<vector<double>> operator+(const vector<vector<double>>& a, const vector<v
 	res.resize(n);
 	for (int i = 0; i < n; ++i) {
 		res[i] = a[i] + b[i];
+	}
+	return res;
+}
+
+vector<double> operator*(const vector<double>& b, const double& coef) {
+	vector<double> res = b;
+	for (auto& elem : res) {
+		elem *= coef;
 	}
 	return res;
 }
@@ -242,7 +246,7 @@ vector<vector<double>> forward(const LUmatrix& A, const vector<vector<double>>& 
 			int j = A.lj[k];
 			sum += A.al[k] * res[j / 2][j % 2];
 		}
-		res[i / 2][i % 2] = (b[i / 2][i % 2] - sum) / A.di[i];
+		res[i / 2][i % 2] = (b[i / 2][i % 2] - sum);
 	}
 	return res;
 }
@@ -318,33 +322,28 @@ LUmatrix luFactorization(const LUmatrix& base) {
 }
 
 double dotProduct(const vector<vector<double>>& a, const vector<vector<double>>& b) {
-	if (a.size() != b.size()) {
-		exit(1);
+	double res = 0;
+	int n = (int)a.size();
+	for (int i = 0; i < n; ++i) {
+		double tmp = a[i][0] * b[i][0] + a[i][1] * b[i][1];
+		res += tmp;
 	}
-	else {
-		double res = 0;
-		int n = (int)a.size();
-		for (int i = 0; i < n; ++i) {
-			double tmp = a[i][0] * b[i][0] + a[i][1] * b[i][1];
-			res += tmp;
-		}
-		return res;
-	}
+	return res;
 }
 
 void los(matrix& A, vector<vector<double>>& b, vector<vector<double>>& x0, double eps) {
-	LUmatrix LU = converter(A);
-	LU = luFactorization(LU);
-	int maxitter = 10000;
+	LUmatrix temp = converter(A);
+	LUmatrix LU = luFactorization(temp);
+	int maxitter = 100000;
 	int itterCount = 0;
 	vector<vector<double>> r0 = b - A * x0;
 	r0 = forward(LU, r0);
 	vector<vector<double>> z0 = backward(LU, r0);
 	vector<vector<double>> p0 = forward(LU, A * z0);
-	double dotB = dotProduct(b, b);
+
 	double nevyazka = dotProduct(r0, r0);
 
-	while (itterCount < maxitter && nevyazka >= eps) {
+	while (/*itterCount < maxitter && */nevyazka >= eps) {
 		cout << nevyazka << endl;
 		double dotP = dotProduct(p0, p0);
 		double alphaK = dotProduct(p0, r0) / dotP;
@@ -416,9 +415,9 @@ vector<vector<pair<int, pair<int, int>>>> formnvtr(const vector<double>& x, cons
 					make_pair(ix + count, ix + xsize + count)));
 				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + iz * xsize * (ysize - 1) + iy * xsize + 1,
 					make_pair(ix + count + 1, ix + xsize + count + 1)));
-				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + iz * xsize * (ysize - 1) + iy * xsize + xsize,
+				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + iz * xsize * (ysize - 1) + iy * xsize + xsize * (ysize - 1),
 					make_pair(ix + count + xsize * ysize, ix + xsize + xsize * ysize + count)));
-				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + iz * xsize * (ysize - 1) + iy * xsize + xsize + 1,
+				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + iz * xsize * (ysize - 1) + iy * xsize + xsize * (ysize - 1) + 1,
 					make_pair(ix + count + xsize * ysize + 1, ix + xsize + xsize * ysize + count + 1)));
 
 				aEdges.emplace_back(make_pair(ix + (xsize - 1) * ysize * zsize + xsize * (ysize - 1) * zsize + iz * xsize * ysize + iy * xsize,
@@ -635,7 +634,7 @@ matrix createGlobalMG(vector<double> mu, vector<double> sigma, double omega, vec
 		}
 		else
 		{
-			std::sort(tmp.begin(), tmp.begin() + i - 1, compareColumn);
+			std::sort(tmp.begin(), tmp.begin() + i, compareColumn);
 			for (int j = 0; j < i; ++j) {
 				al.push_back(tmp[j].first);
 				lj.push_back(tmp[j].second.second);
@@ -685,7 +684,7 @@ vector<double> funcSin(double x, double y, double z) {
 	vector<double> xyz;
 	xyz.resize(3);
 	xyz[0] = 0;
-	xyz[1] = x * x;
+	xyz[1] = 1. / x;
 	xyz[2] = 0;
 	return xyz;
 }
@@ -703,7 +702,7 @@ vector<double> funcFSin(double x, double y, double z, double mu, double sigma, d
 	vector<double> xyz;
 	xyz.resize(3);
 	xyz[0] = 0;
-	xyz[1] = -2 / mu;
+	xyz[1] = -2 / mu / ( x * x * x );
 	xyz[2] = 0;
 	return xyz;
 }
@@ -712,7 +711,7 @@ vector<double> funcFCos(double x, double y, double z, double mu, double sigma, d
 	vector<double> xyz;
 	xyz.resize(3);
 	xyz[0] = 0;
-	xyz[1] = sigma * omega * x * x;
+	xyz[1] = sigma * omega * ( 1. / x );
 	xyz[2] = 0;
 	return xyz;
 }
@@ -811,6 +810,51 @@ void conditions(matrix &matr, vector<vector<double>>& F, vector<vector<pair<int,
 	}
 }
 
+vector<double> resInPoint(double x, double y, double z, vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, vector<vector<double>> F) {
+	vector<double> res;
+
+	for (auto& elem : nvtr) {
+		if ((xyz[elem[0].second.first][0] <= x && x <= xyz[elem[0].second.second][0]) &&
+			(xyz[elem[4].second.first][1] <= y && y <= xyz[elem[4].second.second][1]) &&
+			(xyz[elem[8].second.first][2] <= z && z <= xyz[elem[8].second.second][2])) {
+
+			double hx = xyz[elem[0].second.second][0] - xyz[elem[0].second.first][0];
+			double hy = xyz[elem[4].second.second][1] - xyz[elem[4].second.first][1];
+			double hz = xyz[elem[8].second.second][2] - xyz[elem[8].second.first][2];
+			double Xm = (xyz[elem[0].second.second][0] - x) / hx;
+			double Xp = (x - xyz[elem[0].second.first][0]) / hx;
+			double Ym = (xyz[elem[4].second.second][1] - y) / hy;
+			double Yp = (y - xyz[elem[4].second.first][1]) / hy;
+			double Zm = (xyz[elem[8].second.second][2] - z) / hz;
+			double Zp = (z - xyz[elem[8].second.first][2]) / hz;
+
+			vector<double> phi0 = {Ym * Zm, 0, 0};
+			vector<double> phi1 = {Yp * Zm, 0, 0};
+			vector<double> phi2 = {Ym * Zp, 0, 0};
+			vector<double> phi3 = {Yp * Zp, 0, 0};
+			vector<double> phi4 = {0, Xm * Zm, 0};
+			vector<double> phi5 = {0, Xp * Zm, 0};
+			vector<double> phi6 = {0, Xm * Zp, 0};
+			vector<double> phi7 = {0, Xp * Zp, 0};
+			vector<double> phi8 = {0, 0, Xm * Ym};
+			vector<double> phi9 = {0, 0, Xp * Ym };
+			vector<double> phi10 = {0, 0, Xm * Yp };
+			vector<double> phi11 = {0, 0, Xp * Yp };
+
+			double xPoint = (xyz[elem[0].second.second][0] + xyz[elem[0].second.first][0]) / 2;
+			double yPoint = (xyz[elem[4].second.second][1] + xyz[elem[4].second.first][1]) / 2;
+			double zPoint = (xyz[elem[8].second.second][2] + xyz[elem[8].second.first][2]) / 2;
+
+			res = phi0 * F[elem[0].first][0] + phi1 * F[elem[1].first][0] + phi2 * F[elem[2].first][0] + phi3 * F[elem[3].first][0] +
+				phi4 * F[elem[4].first][0] + phi5 * F[elem[5].first][0] + phi6 * F[elem[6].first][0] + phi7 * F[elem[7].first][0] +
+				phi8 * F[elem[8].first][0] + phi9 * F[elem[9].first][0] + phi10 * F[elem[10].first][0] + phi11 * F[elem[11].first][0];
+			break;
+		}
+	}
+
+	return res;
+}
+
 int main() {
 	ifstream fin("x.txt");
 	vector<double> x, y, z, mu, omega, sigma;
@@ -860,6 +904,15 @@ int main() {
 
 	int n = (x.size() - 1) * y.size() * z.size() + x.size() * y.size() * (z.size() - 1) + x.size() * (y.size() - 1) * z.size();
 
+	//не забудь изменить ввод
+	
+	for (int i = 0; i < n - 1; ++i) {
+		mu.push_back(mu[0]);
+		sigma.push_back(sigma[0]);
+	}
+	
+	//
+
 	vector<vector<double>> xyz = formxyz(x, y, z);
 	vector<vector<pair<int, pair<int, int>>>> nvtr = formnvtr(x, y, z);
 
@@ -875,8 +928,17 @@ int main() {
 
 	los(A, F, x0, eps);
 
-	for (int i = 0; i < x0.size(); ++i) {
-		cout << i << ": " << x0[i][0] << "\t\t" << x0[i][1] << endl;
+	int numberOfNode = (x.size() - 1) * y.size() * z.size() + x.size() * (y.size() - 1) * (z.size() / 2) + x.size() / 2;
+
+	cout << endl;
+	for (int i = 0; i < y.size() - 1; ++i) {
+		int div = i * x.size();
+		cout << numberOfNode + i * x.size() << ": " << x0[numberOfNode + i * x.size()][0] << endl;
+	}
+	cout << endl;
+
+	for (int i = 2; i < 20; ++i) {
+		cout << "Result in point(" << i << ", 5, 5): " << resInPoint(i, 5, 5, nvtr, xyz, x0)[1] << endl;
 	}
 	return 0;
 }
