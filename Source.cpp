@@ -2,9 +2,13 @@
 #include <fstream>
 #include <algorithm>
 #include <iostream>
+#include <ctime>
 
 using namespace std;
 
+
+unsigned int startTime;
+unsigned int endTime;
 
 double D[4][4] = {
 	   {4, 2, 2, 1},
@@ -60,6 +64,13 @@ struct LUmatrix // —труктура дл€ матрицы, котора€ хранитс€ в
 	vector<int> lj;// портрет матрицы
 };
 
+struct material {
+	double x0, x1;
+	double y0, y1;
+	double z0, z1;
+	double mu, sigma;
+};
+
 vector<double> operator/(const vector<double>& a, const vector<double>& b) {
 	double coefB = b[0] * b[0] + b[1] * b[1];
 	vector<double> oppositeB = { b[0] / coefB, -(b[1] / coefB) };
@@ -89,8 +100,8 @@ vector<vector<double>> operator*(const matrix& A, const vector<vector<double>>& 
 	int n = (int)A.di.size();
 	res.resize(n);
 	for (auto& elem : res) {
-		elem.push_back(0);
-		elem.push_back(0);
+		elem.emplace_back(0);
+		elem.emplace_back(0);
 	}
 
 	for (int i = 0; i < n; ++i) {
@@ -112,8 +123,8 @@ vector<vector<double>> operator-(const vector<vector<double>>& a, const vector<v
 	int n = (int)a.size();
 	res.resize(n);
 	for (int i = 0; i < n; ++i) {
-		res[i].push_back(a[i][0] - b[i][0]);
-		res[i].push_back(a[i][1] - b[i][1]);
+		res[i].emplace_back(a[i][0] - b[i][0]);
+		res[i].emplace_back(a[i][1] - b[i][1]);
 	}
 
 	return res;
@@ -122,9 +133,9 @@ vector<vector<double>> operator-(const vector<vector<double>>& a, const vector<v
 vector<vector<double>> operator*(const double& coef, const vector<vector<double>>& b) {
 	vector<vector<double>> res;
 	int n = (int)b.size();
-	res.reserve(n);
+	res.resize(n);
 	for (int i = 0; i < n; ++i) {
-		res.push_back({ coef * b[i][0], coef * b[i][1] });
+		res[i] =  { coef * b[i][0], coef * b[i][1] };
 	}
 	return res;
 }
@@ -134,7 +145,7 @@ vector<vector<double>> operator*(const vector<double>& coef, const vector<vector
 	int n = (int)b.size();
 	res.reserve(n);
 	for (int i = 0; i < n; ++i) {
-		res.push_back(coef * b[i]);
+		res.emplace_back(coef * b[i]);
 	}
 	return res;
 }
@@ -155,6 +166,150 @@ vector<double> operator*(const vector<double>& b, const double& coef) {
 		elem *= coef;
 	}
 	return res;
+}
+
+void readObjects(vector<material>& materials, const char* fileName) {
+	ifstream fin(fileName);
+	int n;
+	material tmp;
+
+	fin >> n;
+
+	for (int i = 0; i < n; ++i) {
+		fin >> tmp.x0 >> tmp.x1 >> tmp.y0 >> tmp.y1 >> tmp.z0 >> tmp.z1 >> tmp.mu >> tmp.sigma;
+		materials.emplace_back(tmp);
+	}
+}
+
+void readNet(vector<double>& x, vector<double>& y, vector<double>& z,
+	const char* fileName, const vector<material>& materials) {
+	ifstream fin(fileName);
+	//x
+	int nx;
+
+	fin >> nx;
+
+	vector<double> vertexX(nx);
+	vector<double> sectionsX(nx - 1);
+	vector<double> ratiosX(nx - 1);
+	for (int i = 0; i < nx; ++i)
+		fin >> vertexX[i];
+	for (int i = 0; i < nx - 1; ++i)
+		fin >> sectionsX[i];
+	for (int i = 0; i < nx - 1; ++i)
+		fin >> ratiosX[i];
+
+	double hx, tmpx;
+
+	for (int j = 0; j < nx - 1; j++) {
+		if (ratiosX[j] != 1)
+			hx = (vertexX[j + 1] - vertexX[j]) * (1. - ratiosX[j]) / (1. - pow(ratiosX[j], sectionsX[j]));
+		else hx = (vertexX[j + 1] - vertexX[j]) / sectionsX[j];
+
+		tmpx = vertexX[j];
+
+		for (int k = 0; k < sectionsX[j]; k++) {
+			x.emplace_back(tmpx);
+			tmpx += hx;
+			hx *= ratiosX[j];
+		}
+	}
+	x.emplace_back(tmpx);
+	//y
+	int ny;
+
+	fin >> ny;
+
+	vector<double> vertexY(ny);
+	vector<double> sectionsY(ny - 1);
+	vector<double> ratiosY(ny - 1);
+	for (int i = 0; i < ny; ++i)
+		fin >> vertexY[i];
+	for (int i = 0; i < ny - 1; ++i)
+		fin >> sectionsY[i];
+	for (int i = 0; i < ny - 1; ++i)
+		fin >> ratiosY[i];
+
+	double hy, tmpy;
+
+	for (int j = 0; j < ny - 1; j++) {
+		if (ratiosY[j] != 1)
+			hy = (vertexY[j + 1] - vertexY[j]) * (1. - ratiosY[j]) / (1. - pow(ratiosY[j], sectionsY[j]));
+		else hy = (vertexY[j + 1] - vertexY[j]) / sectionsY[j];
+
+		tmpy = vertexY[j];
+
+		for (int k = 0; k < sectionsY[j]; k++) {
+			y.emplace_back(tmpy);
+			tmpy += hy;
+			hy *= ratiosY[j];
+		}
+	}
+	y.emplace_back(tmpy);
+	//z
+	int nz;
+
+	fin >> nz;
+
+	vector<double> vertexZ(nz);
+	vector<double> sectionsZ(nz - 1);
+	vector<double> ratiosZ(nz - 1);
+	for (int i = 0; i < nz; ++i)
+		fin >> vertexZ[i];
+	for (int i = 0; i < nz - 1; ++i)
+		fin >> sectionsZ[i];
+	for (int i = 0; i < nz - 1; ++i)
+		fin >> ratiosZ[i];
+
+	double hz, tmpz;
+
+	for (int j = 0; j < nz - 1; j++) {
+		if (ratiosZ[j] != 1)
+			hz = (vertexZ[j + 1] - vertexZ[j]) * (1. - ratiosZ[j]) / (1. - pow(ratiosZ[j], sectionsZ[j]));
+		else hz = (vertexZ[j + 1] - vertexZ[j]) / sectionsZ[j];
+
+		tmpz = vertexX[j];
+
+		for (int k = 0; k < sectionsZ[j]; k++) {
+			z.emplace_back(tmpz);
+			tmpz += hz;
+			hz *= ratiosZ[j];
+		}
+	}
+	z.emplace_back(tmpz);
+}
+
+int checkWhichMaterial(double x, double y, double z, const vector<material>& materials) {
+	int n = materials.size() - 1;
+	for (; n >= 0; --n) {
+		if (materials[n].x0 <= x && x <= materials[n].x1 &&
+			materials[n].y0 <= y && y <= materials[n].y1 &&
+			materials[n].z0 <= z && z <= materials[n].z1)
+				return n;
+	}
+	return -1;
+}
+
+void fillMuSigma(const vector<double>& x, const vector<double>& y, const vector<double>& z, vector<double>& mu, vector<double>& sigma, const vector<material> & materials) {
+	int nx = x.size() - 1, ny = y.size() - 1, nz = z.size() - 1;
+	for (int oz = 0; oz < nz; ++oz) {
+		for (int oy = 0; oy < ny; ++oy) {
+			for (int ox = 0; ox < nx; ++ox) {
+				int midX = (x[ox] + x[ox + 1]) / 2;
+				int midY = (x[oy] + x[oy + 1]) / 2;
+				int midZ = (z[oz] + z[oz + 1]) / 2;
+				int check = checkWhichMaterial(midX, midY, midZ, materials);
+				if (check != -1) {
+					mu.emplace_back(materials[check].mu);
+					sigma.emplace_back(materials[check].sigma);
+				}
+				else {
+					mu.emplace_back(0);
+					sigma.emplace_back(0);
+				}
+			}
+		}
+	}
 }
 
 LUmatrix converter(const matrix& base) {
@@ -186,25 +341,25 @@ LUmatrix converter(const matrix& base) {
 		for (int elemN = i0; elemN < i1; ++elemN) {
 			int column = base.lj[elemN];
 
-			al1.push_back(base.al[elemN][0]);
-			al1.push_back(-base.al[elemN][1]);
-			al2.push_back(base.al[elemN][1]);
-			al2.push_back(base.al[elemN][0]);
+			al1.emplace_back(base.al[elemN][0]);
+			al1.emplace_back(-base.al[elemN][1]);
+			al2.emplace_back(base.al[elemN][1]);
+			al2.emplace_back(base.al[elemN][0]);
 
-			au1.push_back(base.al[elemN][0]);
-			au1.push_back(base.al[elemN][1]);
-			au2.push_back(-base.al[elemN][1]);
-			au2.push_back(base.al[elemN][0]);
+			au1.emplace_back(base.al[elemN][0]);
+			au1.emplace_back(base.al[elemN][1]);
+			au2.emplace_back(-base.al[elemN][1]);
+			au2.emplace_back(base.al[elemN][0]);
 
-			lj1.push_back(column * 2);
-			lj1.push_back(column * 2 + 1);
-			lj2.push_back(column * 2);
-			lj2.push_back(column * 2 + 1);
+			lj1.emplace_back(column * 2);
+			lj1.emplace_back(column * 2 + 1);
+			lj2.emplace_back(column * 2);
+			lj2.emplace_back(column * 2 + 1);
 		}
 		//диагональные элементы
-		al2.push_back(base.di[line][1]);
-		au2.push_back(-base.di[line][1]);
-		lj2.push_back(line * 2);
+		al2.emplace_back(base.di[line][1]);
+		au2.emplace_back(-base.di[line][1]);
+		lj2.emplace_back(line * 2);
 		//заполни массив li
 		unsigned int count1 = al1.size();
 		unsigned int count2 = al2.size();
@@ -332,8 +487,16 @@ double dotProduct(const vector<vector<double>>& a, const vector<vector<double>>&
 }
 
 void los(matrix& A, vector<vector<double>>& b, vector<vector<double>>& x0, double eps) {
+	startTime = clock();
 	LUmatrix temp = converter(A);
+	endTime = clock();
+	cout << "Converting time: " << endTime - startTime << endl;
+
+	startTime = clock();
 	LUmatrix LU = luFactorization(temp);
+	endTime = clock();
+	cout << "LU time: " << endTime - startTime << endl;
+
 	int maxitter = 100000;
 	int itterCount = 0;
 	vector<vector<double>> r0 = b - A * x0;
@@ -465,7 +628,7 @@ vector<vector<pair<int, pair<int, int>>>> formnvtr(const vector<double>& x, cons
 					<< aEdges[11].first << ' '
 					<< aEdges[11].second.first << ' '
 					<< aEdges[11].second.second << endl << endl;
-				tmpEdges.push_back(aEdges);
+				tmpEdges.emplace_back(aEdges);
 				aEdges.clear();
 			}
 			count = (int)iz * xsize * ysize;
@@ -513,7 +676,7 @@ vector<vector<double>> locEdgesM(double coef, double omega, double hx, double hy
 	for (int i = 0; i < 4; ++i) {
 		vector<double> tmp;
 		for (int j = 0; j < 4; ++j) {
-			tmp.push_back(D[i][j] * coef * omega * hx * hy * hz / 36);
+			tmp.emplace_back(D[i][j] * coef * omega * hx * hy * hz / 36);
 		}
 		locM.emplace_back(tmp);
 	}
@@ -533,8 +696,8 @@ vector<vector<vector<double>>> createLocalMG(double mu, double sigma, double ome
 		vector<vector<double>> tmp;
 		for(int j = 0; j <= i; ++j){
 			vector<double> tmp2;
-			tmp2.push_back(locG[i][j]);
-			tmp2.push_back(0);
+			tmp2.emplace_back(locG[i][j]);
+			tmp2.emplace_back(0);
 			tmp.emplace_back(tmp2);
 		}
 		locMG.emplace_back(tmp);
@@ -575,8 +738,8 @@ matrix createGlobalMG(vector<double> mu, vector<double> sigma, double omega, vec
 	vector<vector<double>> di;
 	di.resize(n);
 	for (int i = 0; i < n; ++i) {
-		di[i].push_back(0);
-		di[i].push_back(0);
+		di[i].emplace_back(0);
+		di[i].emplace_back(0);
 	}
 	
 	vector<int> li;
@@ -626,28 +789,27 @@ matrix createGlobalMG(vector<double> mu, vector<double> sigma, double omega, vec
 	}
 
 	std::sort(tmp.begin(), tmp.end(), compareLine);
-	int i = 1;
+	int i = 1, j = 0;
 	while (i < tmp.size()) {
-		if (tmp[i].second.first == tmp[0].second.first) {
+		if (tmp[i].second.first == tmp[j].second.first) {
 			i++;
 			continue;
 		}
 		else
 		{
-			std::sort(tmp.begin(), tmp.begin() + i, compareColumn);
-			for (int j = 0; j < i; ++j) {
-				al.push_back(tmp[j].first);
-				lj.push_back(tmp[j].second.second);
+			std::sort(tmp.begin() + j, tmp.begin() + i, compareColumn);
+			for (int k = j; k < i; ++k) {
+				al.emplace_back(tmp[k].first);
+				lj.emplace_back(tmp[k].second.second);
 			}
-			tmp.erase(tmp.begin(), tmp.begin() + i);
-			i = 1;
+			j = i;
 		}
 	}
 
-	std::sort(tmp.begin(), tmp.end(), compareColumn);
-	for (auto& elem : tmp) {
-		al.push_back(elem.first);
-		lj.push_back(elem.second.second);
+	std::sort(tmp.begin() + j, tmp.end(), compareColumn);
+	for (auto elem = tmp.begin() + j; elem < tmp.end(); ++elem) {
+		al.emplace_back(elem->first);
+		lj.emplace_back(elem->second.second);
 	}
 	tmp.clear();
 
@@ -770,8 +932,9 @@ vector<vector<double>> createF(vector<vector<pair<int, pair<int, int>>>> nvtr, v
 	vector<double> FCos = createFCos(nvtr, xyz, mu, sigma, omega, n);
 	vector<double> FSin = createFSin(nvtr, xyz, mu, sigma, omega, n);
 	vector<vector<double>> res;
+	res.resize(n);
 	for (int i = 0; i < n; ++i) {
-		res.push_back({ FSin[i], FCos[i] });
+		res[i] = { FSin[i], FCos[i] };
 	}
 	return res;
 }
@@ -856,47 +1019,16 @@ vector<double> resInPoint(double x, double y, double z, vector<vector<pair<int, 
 }
 
 int main() {
-	ifstream fin("x.txt");
+	vector<material> materials;
 	vector<double> x, y, z, mu, omega, sigma;
+	readObjects(materials, "materials.txt");
+	readNet(x, y, z, "net.txt", materials);
+	fillMuSigma(x, y, z, mu, sigma, materials);
+	ifstream fin("omega.txt");
 	while (!fin.eof()) {
 		double tmp;
 		fin >> tmp;
-		x.emplace_back(tmp);
-	}
-	fin.close();
-	fin.open("y.txt");
-	while (!fin.eof()) {
-		double tmp;
-		fin >> tmp;
-		y.emplace_back(tmp);
-	}
-	fin.close();
-	fin.open("z.txt");
-	while (!fin.eof()) {
-		double tmp;
-		fin >> tmp;
-		z.emplace_back(tmp);
-	}
-	fin.close();
-	fin.open("mu.txt");
-	while (!fin.eof()) {
-		double tmp;
-		fin >> tmp;
-		mu.push_back(tmp);
-	}
-	fin.close();
-	fin.open("sigma.txt");
-	while (!fin.eof()) {
-		double tmp;
-		fin >> tmp;
-		sigma.push_back(tmp);
-	}
-	fin.close();
-	fin.open("omega.txt");
-	while (!fin.eof()) {
-		double tmp;
-		fin >> tmp;
-		omega.push_back(tmp);
+		omega.emplace_back(tmp);
 	}
 	fin.close();
 
@@ -904,26 +1036,22 @@ int main() {
 
 	int n = (x.size() - 1) * y.size() * z.size() + x.size() * y.size() * (z.size() - 1) + x.size() * (y.size() - 1) * z.size();
 
-	//не забудь изменить ввод
-	
-	for (int i = 0; i < n - 1; ++i) {
-		mu.push_back(mu[0]);
-		sigma.push_back(sigma[0]);
-	}
-	
-	//
-
 	vector<vector<double>> xyz = formxyz(x, y, z);
 	vector<vector<pair<int, pair<int, int>>>> nvtr = formnvtr(x, y, z);
 
+	startTime = clock();
 	matrix A = createGlobalMG(mu, sigma, omega[0], nvtr, xyz, n);
+	endTime = clock();
+	cout << "Creating Global matrix time: " << endTime - startTime << endl;
+
 	vector<vector<double>> F = createF(nvtr, xyz, mu, sigma, omega[0], n);
 
 	conditions(A, F, nvtr, xyz, x, y, z);
 
 	vector<vector<double>> x0;
+	x0.resize(n);
 	for (int i = 0; i < n; ++i) {
-		x0.push_back({ 0, 0 });
+		x0[i] = { 0, 0 };
 	}
 
 	los(A, F, x0, eps);
@@ -937,8 +1065,13 @@ int main() {
 	}
 	cout << endl;
 
-	for (int i = 2; i < 20; ++i) {
+	cout << "Result in point(11, 11, 11): " << resInPoint(11, 11, 11, nvtr, xyz, x0)[1] << endl;
+
+	/*for (int i = 2; i < 20; ++i) {
 		cout << "Result in point(" << i << ", 5, 5): " << resInPoint(i, 5, 5, nvtr, xyz, x0)[1] << endl;
-	}
+	}*/
+
+	cout << "Count of elements: " << (x.size() - 1) * (y.size() - 1) * (z.size() - 1) << endl;
+
 	return 0;
 }

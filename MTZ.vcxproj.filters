@@ -20,28 +20,19 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="mu.txt">
-      <Filter>Файлы ресурсов</Filter>
-    </Text>
     <Text Include="nvtr.txt">
       <Filter>Файлы ресурсов</Filter>
     </Text>
     <Text Include="omega.txt">
       <Filter>Файлы ресурсов</Filter>
     </Text>
-    <Text Include="sigma.txt">
-      <Filter>Файлы ресурсов</Filter>
-    </Text>
-    <Text Include="x.txt">
-      <Filter>Файлы ресурсов</Filter>
-    </Text>
     <Text Include="xyz.txt">
       <Filter>Файлы ресурсов</Filter>
     </Text>
-    <Text Include="y.txt">
+    <Text Include="materials.txt">
       <Filter>Файлы ресурсов</Filter>
     </Text>
-    <Text Include="z.txt">
+    <Text Include="net.txt">
       <Filter>Файлы ресурсов</Filter>
     </Text>
   </ItemGroup>
