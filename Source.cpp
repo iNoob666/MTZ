@@ -758,7 +758,7 @@ matrix createGlobalMG(vector<double> mu, vector<double> sigma, double omega, vec
 			abs(xyz[nvtr[k][8].second.first][2] - xyz[nvtr[k][8].second.second][2]));
 
 		for (int i = 0; i < 12; ++i) {
-			int count = 0;
+			//int count = 0;
 			for (int j = 0; j <= i; ++j) {
 				if (i == j) {
 					di[nvtr[k][i].first][0] += locMG[i][j][0];
@@ -768,7 +768,7 @@ matrix createGlobalMG(vector<double> mu, vector<double> sigma, double omega, vec
 				if (isZero(locMG[i][j])) {
 					continue;
 				}
-				auto res = find_if(tmp.begin(), tmp.end(), [b = make_pair(nvtr[k][i].first, nvtr[k][j].first)](pair<vector<double>, pair<int, int>> a) {
+				/*auto res = find_if(tmp.begin(), tmp.end(), [b = make_pair(nvtr[k][i].first, nvtr[k][j].first)](pair<vector<double>, pair<int, int>> a) {
 					if (a.second.first == b.first && a.second.second == b.second) {
 						return true;
 					}
@@ -777,14 +777,14 @@ matrix createGlobalMG(vector<double> mu, vector<double> sigma, double omega, vec
 				if (res != tmp.end()) {
 					res->first = res->first + locMG[i][j];
 				}
-				else {
+				else {*/
 					tmp.emplace_back(make_pair(locMG[i][j], make_pair(nvtr[k][i].first, nvtr[k][j].first)));
-					count++;
-				}
+					//count++;
+				//}
 			}
-			for (int f = nvtr[k][i].first + 1; f < li.size(); ++f) {
+			/*for (int f = nvtr[k][i].first + 1; f < li.size(); ++f) {
 				li[f] += count;
-			}
+			}*/
 		}
 	}
 
@@ -798,18 +798,42 @@ matrix createGlobalMG(vector<double> mu, vector<double> sigma, double omega, vec
 		else
 		{
 			std::sort(tmp.begin() + j, tmp.begin() + i, compareColumn);
-			for (int k = j; k < i; ++k) {
-				al.emplace_back(tmp[k].first);
-				lj.emplace_back(tmp[k].second.second);
+			al.emplace_back(tmp[j].first);
+			lj.emplace_back(tmp[j].second.second);
+			int count = 1;
+			for (int k = j + 1; k < i; ++k) {
+				if (tmp[k].second.second != tmp[k - 1].second.second) {
+					al.emplace_back(tmp[k].first);
+					lj.emplace_back(tmp[k].second.second);
+					count++;
+				}
+				else {
+					al[al.size() - 1] = al[al.size() - 1] + tmp[k].first;
+				}
+			}
+			for (int f = tmp[j].second.first + 1; f < li.size(); ++f) {
+				li[f] += count;
 			}
 			j = i;
 		}
 	}
 
 	std::sort(tmp.begin() + j, tmp.end(), compareColumn);
-	for (auto elem = tmp.begin() + j; elem < tmp.end(); ++elem) {
-		al.emplace_back(elem->first);
-		lj.emplace_back(elem->second.second);
+	al.emplace_back((tmp.begin() + j)->first);
+	lj.emplace_back((tmp.begin() + j)->second.second);
+	int count = 1;
+	for (auto elem = tmp.begin() + j + 1; elem < tmp.end(); ++elem) {
+		if (elem->second.second != (elem - 1)->second.second) {
+			al.emplace_back(elem->first);
+			lj.emplace_back(elem->second.second);
+			count++;
+		}
+		else {
+			al[al.size() - 1] = al[al.size() - 1] + elem->first;
+		}
+	}
+	for (int f = tmp[j].second.first + 1; f < li.size(); ++f) {
+		li[f] += count;
 	}
 	tmp.clear();
 
