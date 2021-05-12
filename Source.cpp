@@ -768,23 +768,8 @@ matrix createGlobalMG(vector<double> mu, vector<double> sigma, double omega, vec
 				if (isZero(locMG[i][j])) {
 					continue;
 				}
-				/*auto res = find_if(tmp.begin(), tmp.end(), [b = make_pair(nvtr[k][i].first, nvtr[k][j].first)](pair<vector<double>, pair<int, int>> a) {
-					if (a.second.first == b.first && a.second.second == b.second) {
-						return true;
-					}
-					return false;
-				});
-				if (res != tmp.end()) {
-					res->first = res->first + locMG[i][j];
-				}
-				else {*/
-					tmp.emplace_back(make_pair(locMG[i][j], make_pair(nvtr[k][i].first, nvtr[k][j].first)));
-					//count++;
-				//}
+				tmp.emplace_back(make_pair(locMG[i][j], make_pair(nvtr[k][i].first, nvtr[k][j].first)));
 			}
-			/*for (int f = nvtr[k][i].first + 1; f < li.size(); ++f) {
-				li[f] += count;
-			}*/
 		}
 	}
 
@@ -1056,46 +1041,46 @@ int main() {
 	}
 	fin.close();
 
-	double eps = 1e-16;
-
 	int n = (x.size() - 1) * y.size() * z.size() + x.size() * y.size() * (z.size() - 1) + x.size() * (y.size() - 1) * z.size();
-
-	vector<vector<double>> xyz = formxyz(x, y, z);
-	vector<vector<pair<int, pair<int, int>>>> nvtr = formnvtr(x, y, z);
-
-	startTime = clock();
-	matrix A = createGlobalMG(mu, sigma, omega[0], nvtr, xyz, n);
-	endTime = clock();
-	cout << "Creating Global matrix time: " << endTime - startTime << endl;
-
-	vector<vector<double>> F = createF(nvtr, xyz, mu, sigma, omega[0], n);
-
-	conditions(A, F, nvtr, xyz, x, y, z);
-
+	double eps = 1e-16;
 	vector<vector<double>> x0;
 	x0.resize(n);
 	for (int i = 0; i < n; ++i) {
 		x0[i] = { 0, 0 };
 	}
+	
+	vector<vector<double>> xyz = formxyz(x, y, z);
+	vector<vector<pair<int, pair<int, int>>>> nvtr = formnvtr(x, y, z);
 
-	los(A, F, x0, eps);
+	for (int i = 0; i < omega.size(); ++i) {
 
-	int numberOfNode = (x.size() - 1) * y.size() * z.size() + x.size() * (y.size() - 1) * (z.size() / 2) + x.size() / 2;
+		startTime = clock();
+		matrix A = createGlobalMG(mu, sigma, omega[i], nvtr, xyz, n);
+		endTime = clock();
+		cout << "Creating Global matrix time: " << endTime - startTime << endl;
 
-	cout << endl;
-	for (int i = 0; i < y.size() - 1; ++i) {
-		int div = i * x.size();
-		cout << numberOfNode + i * x.size() << ": " << x0[numberOfNode + i * x.size()][0] << endl;
+		vector<vector<double>> F = createF(nvtr, xyz, mu, sigma, omega[i], n);
+
+		conditions(A, F, nvtr, xyz, x, y, z);
+
+		los(A, F, x0, eps);
+
+		//int numberOfNode = (x.size() - 1) * y.size() * z.size() + x.size() * (y.size() - 1) * (z.size() / 2) + x.size() / 2;
+
+		/*cout << endl;
+		for (int i = 0; i < y.size() - 1; ++i) {
+			int div = i * x.size();
+			cout << numberOfNode + i * x.size() << ": " << x0[numberOfNode + i * x.size()][0] << endl;
+		}
+		cout << endl;*/
+
+		cout << "Result in point(11, 11, 11): " << resInPoint(11, 11, 11, nvtr, xyz, x0)[1] << endl;
 	}
-	cout << endl;
-
-	cout << "Result in point(11, 11, 11): " << resInPoint(11, 11, 11, nvtr, xyz, x0)[1] << endl;
-
 	/*for (int i = 2; i < 20; ++i) {
 		cout << "Result in point(" << i << ", 5, 5): " << resInPoint(i, 5, 5, nvtr, xyz, x0)[1] << endl;
 	}*/
 
-	cout << "Count of elements: " << (x.size() - 1) * (y.size() - 1) * (z.size() - 1) << endl;
+	//cout << "Count of elements: " << (x.size() - 1) * (y.size() - 1) * (z.size() - 1) << endl;
 
 	return 0;
 }
