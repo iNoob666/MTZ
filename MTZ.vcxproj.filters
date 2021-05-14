@@ -35,5 +35,8 @@
     <Text Include="net.txt">
       <Filter>Файлы ресурсов</Filter>
     </Text>
+    <Text Include="res.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
   </ItemGroup>
 </Project>

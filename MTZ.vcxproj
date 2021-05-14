@@ -146,6 +146,7 @@
     <Text Include="net.txt" />
     <Text Include="nvtr.txt" />
     <Text Include="omega.txt" />
+    <Text Include="res.txt" />
     <Text Include="xyz.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

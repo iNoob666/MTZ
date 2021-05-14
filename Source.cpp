@@ -268,7 +268,7 @@ void readNet(vector<double>& x, vector<double>& y, vector<double>& z,
 			hz = (vertexZ[j + 1] - vertexZ[j]) * (1. - ratiosZ[j]) / (1. - pow(ratiosZ[j], sectionsZ[j]));
 		else hz = (vertexZ[j + 1] - vertexZ[j]) / sectionsZ[j];
 
-		tmpz = vertexX[j];
+		tmpz = vertexZ[j];
 
 		for (int k = 0; k < sectionsZ[j]; k++) {
 			z.emplace_back(tmpz);
@@ -948,9 +948,9 @@ vector<vector<double>> createF(vector<vector<pair<int, pair<int, int>>>> nvtr, v
 	return res;
 }
 
-void conditions(matrix &matr, vector<vector<double>>& F, vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, const vector<double>& x, const vector<double>& y, const vector<double>& z) {
-
-	for (int elemNum = 0; elemNum < nvtr.size(); ++elemNum) {
+void conditions(matrix& matr, vector<vector<double>>& F, vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz,
+	const vector<double>& x, const vector<double>& y, const vector<double>& z, double amperage) {
+		/*for (int elemNum = 0; elemNum < nvtr.size(); ++elemNum) {
 		for (int i = 0; i < 12; ++i) {
 			if ((xyz[nvtr[elemNum][i].second.first][2] == z[0] &&
 				xyz[nvtr[elemNum][i].second.second][2] == z[0]) ||
@@ -979,11 +979,48 @@ void conditions(matrix &matr, vector<vector<double>>& F, vector<vector<pair<int,
 				matr.di[nvtr[elemNum][i].first][0] = 1e10;
 			}
 		}
+	}*/
+
+	for (int elemNum = 0; elemNum < nvtr.size(); ++elemNum) {
+		for (int i = 0; i < 12; ++i) {
+			//верхн€€ грань
+			if ((xyz[nvtr[elemNum][i].second.first][2] == z[z.size() - 1] &&
+				xyz[nvtr[elemNum][i].second.second][2] == z[z.size() - 1]) &&
+				
+				xyz[nvtr[elemNum][i].second.first][1] != xyz[nvtr[elemNum][i].second.second][1]) {
+				F[nvtr[elemNum][i].first][0] = amperage * 1e10;
+				matr.di[nvtr[elemNum][i].first][0] = 1e10;
+			}
+			//нижн€€ грань
+			if ((xyz[nvtr[elemNum][i].second.first][2] == z[0] &&
+				xyz[nvtr[elemNum][i].second.second][2] == z[0]) &&
+
+				xyz[nvtr[elemNum][i].second.first][1] != xyz[nvtr[elemNum][i].second.second][1]) {
+				F[nvtr[elemNum][i].first][0] = 0;
+				matr.di[nvtr[elemNum][i].first][0] = 1e10;
+			}
+			//боковые грани
+			if ((xyz[nvtr[elemNum][i].second.first][0] == x[0] &&
+				xyz[nvtr[elemNum][i].second.second][0] == x[0]) ||
+
+				(xyz[nvtr[elemNum][i].second.first][0] == x[x.size() - 1] &&
+					xyz[nvtr[elemNum][i].second.second][0] == x[x.size() - 1]) ||
+
+				(xyz[nvtr[elemNum][i].second.first][1] == y[0] &&
+					xyz[nvtr[elemNum][i].second.second][1] == y[0]) ||
+
+				(xyz[nvtr[elemNum][i].second.first][1] == y[y.size() - 1] &&
+					xyz[nvtr[elemNum][i].second.second][1] == y[y.size() - 1])) {
+				matr.di[nvtr[elemNum][i].first][0] = 1e10;
+			}
+		}
 	}
 }
 
-vector<double> resInPoint(double x, double y, double z, vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, vector<vector<double>> F) {
-	vector<double> res;
+vector<vector<double>> resInPoint(const double &x, const double &y, const double &z, vector<vector<pair<int, pair<int, int>>>> nvtr, vector<vector<double>> xyz, vector<vector<double>> F) {
+	vector<double> resRe;
+	vector<double> resIm;
+	vector<vector<double>> res;
 
 	for (auto& elem : nvtr) {
 		if ((xyz[elem[0].second.first][0] <= x && x <= xyz[elem[0].second.second][0]) &&
@@ -1017,9 +1054,14 @@ vector<double> resInPoint(double x, double y, double z, vector<vector<pair<int, 
 			double yPoint = (xyz[elem[4].second.second][1] + xyz[elem[4].second.first][1]) / 2;
 			double zPoint = (xyz[elem[8].second.second][2] + xyz[elem[8].second.first][2]) / 2;
 
-			res = phi0 * F[elem[0].first][0] + phi1 * F[elem[1].first][0] + phi2 * F[elem[2].first][0] + phi3 * F[elem[3].first][0] +
+			resRe = phi0 * F[elem[0].first][0] + phi1 * F[elem[1].first][0] + phi2 * F[elem[2].first][0] + phi3 * F[elem[3].first][0] +
 				phi4 * F[elem[4].first][0] + phi5 * F[elem[5].first][0] + phi6 * F[elem[6].first][0] + phi7 * F[elem[7].first][0] +
 				phi8 * F[elem[8].first][0] + phi9 * F[elem[9].first][0] + phi10 * F[elem[10].first][0] + phi11 * F[elem[11].first][0];
+			resIm = phi0 * F[elem[0].first][1] + phi1 * F[elem[1].first][1] + phi2 * F[elem[2].first][1] + phi3 * F[elem[3].first][1] +
+				phi4 * F[elem[4].first][1] + phi5 * F[elem[5].first][1] + phi6 * F[elem[6].first][1] + phi7 * F[elem[7].first][1] +
+				phi8 * F[elem[8].first][1] + phi9 * F[elem[9].first][1] + phi10 * F[elem[10].first][1] + phi11 * F[elem[11].first][1];
+			res.emplace_back(resRe);
+			res.emplace_back(resIm);
 			break;
 		}
 	}
@@ -1030,6 +1072,7 @@ vector<double> resInPoint(double x, double y, double z, vector<vector<pair<int, 
 int main() {
 	vector<material> materials;
 	vector<double> x, y, z, mu, omega, sigma;
+	double amperage = 1;
 	readObjects(materials, "materials.txt");
 	readNet(x, y, z, "net.txt", materials);
 	fillMuSigma(x, y, z, mu, sigma, materials);
@@ -1040,13 +1083,16 @@ int main() {
 		omega.emplace_back(tmp);
 	}
 	fin.close();
-
+	cout << "¬ведите силу тока: ";
+	//cin >> amperage;
 	int n = (x.size() - 1) * y.size() * z.size() + x.size() * y.size() * (z.size() - 1) + x.size() * (y.size() - 1) * z.size();
 	double eps = 1e-16;
-	vector<vector<double>> x0;
+	vector<vector<double>> x0, F;
+	F.resize(n);
 	x0.resize(n);
 	for (int i = 0; i < n; ++i) {
 		x0[i] = { 0, 0 };
+		F[i] = { 0, 0 };
 	}
 	
 	vector<vector<double>> xyz = formxyz(x, y, z);
@@ -1059,9 +1105,9 @@ int main() {
 		endTime = clock();
 		cout << "Creating Global matrix time: " << endTime - startTime << endl;
 
-		vector<vector<double>> F = createF(nvtr, xyz, mu, sigma, omega[i], n);
+		//vector<vector<double>> F = createF(nvtr, xyz, mu, sigma, omega[i], n);
 
-		conditions(A, F, nvtr, xyz, x, y, z);
+		conditions(A, F, nvtr, xyz, x, y, z, amperage);
 
 		los(A, F, x0, eps);
 
@@ -1073,8 +1119,36 @@ int main() {
 			cout << numberOfNode + i * x.size() << ": " << x0[numberOfNode + i * x.size()][0] << endl;
 		}
 		cout << endl;*/
-
-		cout << "Result in point(11, 11, 11): " << resInPoint(11, 11, 11, nvtr, xyz, x0)[1] << endl;
+		ofstream fout("./res/ReX.txt");
+		for (int j = -90; j < 10; ++j) {
+			fout << resInPoint(50, 50, j * 22., nvtr, xyz, x0)[0][0] << "\t" << resInPoint(55, 55, j * 22., nvtr, xyz, x0)[0][0] << endl;
+		}
+		fout.close();
+		fout.open("./res/ReY.txt");
+		for (int j = -90; j < 10; ++j) {
+			fout << resInPoint(50, 50, j * 22., nvtr, xyz, x0)[0][1] << "\t" << resInPoint(55, 55, j * 22., nvtr, xyz, x0)[0][1] << endl;
+		}
+		fout.close();
+		fout.open("./res/ReZ.txt");
+		for (int j = -90; j < 10; ++j) {
+			fout << resInPoint(50, 50, j * 22., nvtr, xyz, x0)[0][2] << "\t" << resInPoint(55, 55, j * 22., nvtr, xyz, x0)[0][2] << endl;
+		}
+		fout.close();
+		fout.open("./res/ImX.txt");
+		for (int j = -90; j < 10; ++j) {
+			fout << resInPoint(50, 50, j * 22., nvtr, xyz, x0)[1][0] << "\t" << resInPoint(55, 55, j * 22., nvtr, xyz, x0)[1][0] << endl;
+		}
+		fout.close();
+		fout.open("./res/ImY.txt");
+		for (int j = -90; j < 10; ++j) {
+			fout << resInPoint(50, 50, j * 22., nvtr, xyz, x0)[1][1] << "\t" << resInPoint(55, 55, j * 22., nvtr, xyz, x0)[1][1] << endl;
+		}
+		fout.close();
+		fout.open("./res/ImZ.txt");
+		for (int j = -90; j < 10; ++j) {
+			fout << resInPoint(50, 50, j * 22., nvtr, xyz, x0)[1][2] << "\t" << resInPoint(55, 55, j * 22., nvtr, xyz, x0)[1][2] << endl;
+		}
+		fout.close();
 	}
 	/*for (int i = 2; i < 20; ++i) {
 		cout << "Result in point(" << i << ", 5, 5): " << resInPoint(i, 5, 5, nvtr, xyz, x0)[1] << endl;
